@@ -5,7 +5,7 @@
 // ============================================
 
 import { PlannerOutput, GeneratorOutput, ComponentType } from '@/types';
-import { callGemini } from './geminiClient';
+import { callLLM } from './llmClient';
 import { getComponentDescriptions } from '../validation';
 
 // ---- PROMPT TEMPLATE (Hard-coded, visible in code as required) ----
@@ -58,7 +58,7 @@ These layout div styles are the ONLY exception. Component styling is handled int
 // ---- GENERATOR FUNCTION ----
 
 export async function runGenerator(plan: PlannerOutput): Promise<GeneratorOutput> {
-  const userMessage = `Convert this component plan into a React component:
+    const userMessage = `Convert this component plan into a React component:
 
 PLAN:
 ${JSON.stringify(plan, null, 2)}
@@ -76,84 +76,84 @@ ${getLayoutGuidance(plan.layout)}
 
 Return ONLY the TSX code, nothing else.`;
 
-  const response = await callGemini(userMessage, GENERATOR_SYSTEM_PROMPT);
+    const response = await callLLM(userMessage, GENERATOR_SYSTEM_PROMPT);
 
-  // Clean the response
-  let code = response.trim();
+    // Clean the response
+    let code = response.trim();
 
-  // Remove markdown code fences if present
-  if (code.startsWith('`')) {
-    code = code.replace(/^`{3}(?:tsx?|jsx?|typescript|javascript)?\s*\n?/, '').replace(/\n?`{3}\s*$/, '');
-  }
-
-  // Ensure the code has the required import
-  if (!code.includes("from '@/components/ui'") && !code.includes('from "@/components/ui"')) {
-    const usedComponents = extractUsedComponents(code);
-    const importLine = `import { ${usedComponents.join(', ')} } from '@/components/ui';\n`;
-    if (!code.startsWith('import React')) {
-      code = `import React from 'react';\n${importLine}\n${code}`;
-    } else {
-      const firstNewline = code.indexOf('\n');
-      code = code.slice(0, firstNewline + 1) + importLine + code.slice(firstNewline + 1);
+    // Remove markdown code fences if present
+    if (code.startsWith('`')) {
+        code = code.replace(/^`{3}(?:tsx?|jsx?|typescript|javascript)?\s*\n?/, '').replace(/\n?`{3}\s*$/, '');
     }
-  }
 
-  // Ensure it has a default export
-  if (!code.includes('export default')) {
-    code = code.replace(
-      /function GeneratedUI/,
-      'export default function GeneratedUI'
-    );
-  }
+    // Ensure the code has the required import
+    if (!code.includes("from '@/components/ui'") && !code.includes('from "@/components/ui"')) {
+        const usedComponents = extractUsedComponents(code);
+        const importLine = `import { ${usedComponents.join(', ')} } from '@/components/ui';\n`;
+        if (!code.startsWith('import React')) {
+            code = `import React from 'react';\n${importLine}\n${code}`;
+        } else {
+            const firstNewline = code.indexOf('\n');
+            code = code.slice(0, firstNewline + 1) + importLine + code.slice(firstNewline + 1);
+        }
+    }
 
-  // Extract the list of components used
-  const componentList = extractUsedComponents(code);
+    // Ensure it has a default export
+    if (!code.includes('export default')) {
+        code = code.replace(
+            /function GeneratedUI/,
+            'export default function GeneratedUI'
+        );
+    }
 
-  return {
-    code,
-    componentList,
-  };
+    // Extract the list of components used
+    const componentList = extractUsedComponents(code);
+
+    return {
+        code,
+        componentList,
+    };
 }
 
 // ---- HELPER: Provide layout-specific guidance ----
 
 function getLayoutGuidance(layout: string): string {
-  const guides: Record<string, string> = {
-    'single-column': `Use a single vertical column:
+    const guides: Record<string, string> = {
+        'single-column': `Use a single vertical column:
   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '24px', maxWidth: '800px', margin: '0 auto' }}>`,
-    'two-column': `Use a two-column grid:
+        'two-column': `Use a two-column grid:
   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', padding: '24px' }}>`,
-    'sidebar-layout': `Use a sidebar + main content layout:
+        'sidebar-layout': `Use a sidebar + main content layout:
   <div style={{ display: 'flex', height: '100vh' }}>
     <Sidebar ... />
     <main style={{ flex: 1, padding: '24px', overflow: 'auto' }}>`,
-    'dashboard': `Use a dashboard grid layout:
+        'dashboard': `Use a dashboard grid layout:
   <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
     <Navbar ... />
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px', padding: '24px' }}>`,
-    'centered': `Center content in the viewport:
+        'centered': `Center content in the viewport:
   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: '24px' }}>
     <div style={{ maxWidth: '500px', width: '100%' }}>`,
-    'full-width': `Use full width layout:
+        'full-width': `Use full width layout:
   <div style={{ width: '100%', padding: '24px' }}>`,
-  };
+    };
 
-  return guides[layout] || guides['single-column'];
+    return guides[layout] || guides['single-column'];
 }
 
 // ---- HELPER: Extract component names from code ----
 
 function extractUsedComponents(code: string): ComponentType[] {
-  const allowed: ComponentType[] = ['Button', 'Card', 'Input', 'Table', 'Modal', 'Sidebar', 'Navbar', 'Chart'];
-  const used: ComponentType[] = [];
+    const allowed: ComponentType[] = ['Button', 'Card', 'Input', 'Table', 'Modal', 'Sidebar', 'Navbar', 'Chart'];
+    const used: ComponentType[] = [];
 
-  for (const comp of allowed) {
-    // Check if component is used in JSX (e.g., <Button or <Card)
-    const regex = new RegExp(`<${comp}[\\s/>]`, 'g');
-    if (regex.test(code)) {
-      used.push(comp);
+    for (const comp of allowed) {
+        // Check if component is used in JSX (e.g., <Button or <Card)
+        const regex = new RegExp(`<${comp}[\\s/>]`, 'g');
+        if (regex.test(code)) {
+            used.push(comp);
+        }
     }
-  }
 
-  return used;
+    return used;
 }

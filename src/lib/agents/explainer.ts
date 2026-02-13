@@ -5,7 +5,7 @@
 // ============================================
 
 import { PlannerOutput, GeneratorOutput, ExplainerOutput } from '@/types';
-import { callGemini } from './geminiClient';
+import { callLLM } from './llmClient';
 
 // ---- PROMPT TEMPLATE (Hard-coded, visible in code as required) ----
 
@@ -36,11 +36,11 @@ Return ONLY the JSON, nothing else.`;
 // ---- EXPLAINER FUNCTION ----
 
 export async function runExplainer(
-  userPrompt: string,
-  plan: PlannerOutput,
-  generation: GeneratorOutput
+    userPrompt: string,
+    plan: PlannerOutput,
+    generation: GeneratorOutput
 ): Promise<ExplainerOutput> {
-  const userMessage = `The user requested: "${userPrompt}"
+    const userMessage = `The user requested: "${userPrompt}"
 
 The Planner chose:
 - Layout: "${plan.layout}"
@@ -53,45 +53,45 @@ Explain the decisions made. Why was this layout chosen? Why was each component s
 
 Output ONLY the JSON explanation, no other text.`;
 
-  const response = await callGemini(userMessage, EXPLAINER_SYSTEM_PROMPT);
+    const response = await callLLM(userMessage, EXPLAINER_SYSTEM_PROMPT);
 
-  // Clean the response
-  let cleanResponse = response.trim();
+    // Clean the response
+    let cleanResponse = response.trim();
 
-  // Remove markdown code fences if present
-  if (cleanResponse.startsWith('`')) {
-    cleanResponse = cleanResponse.replace(/^`{3}(?:json)?\s*\n?/, '').replace(/\n?`{3}\s*$/, '');
-  }
-
-  try {
-    const explanation: ExplainerOutput = JSON.parse(cleanResponse);
-
-    // Validate structure
-    if (!explanation.explanation) {
-      explanation.explanation = 'UI generated based on your request.';
-    }
-    if (!explanation.componentChoices || !Array.isArray(explanation.componentChoices)) {
-      explanation.componentChoices = generation.componentList.map(comp => ({
-        component: comp,
-        reason: `Used to fulfill the user's UI requirements.`,
-      }));
-    }
-    if (!explanation.layoutReason) {
-      explanation.layoutReason = `The "${plan.layout}" layout was selected to best match the requested UI structure.`;
+    // Remove markdown code fences if present
+    if (cleanResponse.startsWith('`')) {
+        cleanResponse = cleanResponse.replace(/^`{3}(?:json)?\s*\n?/, '').replace(/\n?`{3}\s*$/, '');
     }
 
-    return explanation;
-  } catch (error) {
-    // Fallback explanation if JSON parsing fails
-    console.error('Explainer JSON parse error:', error);
+    try {
+        const explanation: ExplainerOutput = JSON.parse(cleanResponse);
 
-    return {
-      explanation: `Generated a ${plan.layout} layout using ${generation.componentList.join(', ')} components based on your request: "${userPrompt}".`,
-      componentChoices: generation.componentList.map(comp => ({
-        component: comp,
-        reason: `Selected to fulfill the requested UI functionality.`,
-      })),
-      layoutReason: `The "${plan.layout}" layout was chosen as the most appropriate structure for this type of UI.`,
-    };
-  }
+        // Validate structure
+        if (!explanation.explanation) {
+            explanation.explanation = 'UI generated based on your request.';
+        }
+        if (!explanation.componentChoices || !Array.isArray(explanation.componentChoices)) {
+            explanation.componentChoices = generation.componentList.map(comp => ({
+                component: comp,
+                reason: `Used to fulfill the user's UI requirements.`,
+            }));
+        }
+        if (!explanation.layoutReason) {
+            explanation.layoutReason = `The "${plan.layout}" layout was selected to best match the requested UI structure.`;
+        }
+
+        return explanation;
+    } catch (error) {
+        // Fallback explanation if JSON parsing fails
+        console.error('Explainer JSON parse error:', error);
+
+        return {
+            explanation: `Generated a ${plan.layout} layout using ${generation.componentList.join(', ')} components based on your request: "${userPrompt}".`,
+            componentChoices: generation.componentList.map(comp => ({
+                component: comp,
+                reason: `Selected to fulfill the requested UI functionality.`,
+            })),
+            layoutReason: `The "${plan.layout}" layout was chosen as the most appropriate structure for this type of UI.`,
+        };
+    }
 }

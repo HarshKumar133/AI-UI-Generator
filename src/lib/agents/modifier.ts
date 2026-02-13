@@ -6,7 +6,7 @@
 // ============================================
 
 import { ComponentType } from '@/types';
-import { callGemini } from './geminiClient';
+import { callLLM } from './llmClient';
 import { getComponentDescriptions } from '../validation';
 
 // ---- PROMPT TEMPLATE ----
@@ -54,22 +54,22 @@ Return ONLY the JSON, no markdown, no code fences.`;
 // ---- MODIFIER FUNCTION ----
 
 export async function runModifier(
-  modificationPrompt: string,
-  currentCode: string,
-  previousContext?: { layout?: string; componentList?: ComponentType[] }
+    modificationPrompt: string,
+    currentCode: string,
+    previousContext?: { layout?: string; componentList?: ComponentType[] }
 ): Promise<{
-  code: string;
-  componentList: ComponentType[];
-  changes: string;
-  changeDetails: { added: string[]; removed: string[]; modified: string[] };
+    code: string;
+    componentList: ComponentType[];
+    changes: string;
+    changeDetails: { added: string[]; removed: string[]; modified: string[] };
 }> {
-  const contextInfo = previousContext
-    ? `\nPrevious context:
+    const contextInfo = previousContext
+        ? `\nPrevious context:
 - Layout: ${previousContext.layout || 'unknown'}
 - Components in use: ${previousContext.componentList?.join(', ') || 'unknown'}`
-    : '';
+        : '';
 
-  const userMessage = `Current code:
+    const userMessage = `Current code:
 \`\`\`tsx
 ${currentCode}
 \`\`\`
@@ -87,45 +87,45 @@ IMPORTANT:
 
 Return ONLY the JSON with "code", "changes", "added", "removed", and "modified" fields.`;
 
-  const response = await callGemini(userMessage, MODIFIER_SYSTEM_PROMPT);
+    const response = await callLLM(userMessage, MODIFIER_SYSTEM_PROMPT);
 
-  let cleanResponse = response.trim();
-  if (cleanResponse.startsWith('`')) {
-    cleanResponse = cleanResponse.replace(/^`{3}(?:json)?\s*\n?/, '').replace(/\n?`{3}\s*$/, '');
-  }
-
-  try {
-    const result = JSON.parse(cleanResponse);
-    let code = result.code || currentCode;
-    const changes = result.changes || 'Code modified based on your request.';
-    const changeDetails = {
-      added: result.added || [],
-      removed: result.removed || [],
-      modified: result.modified || [],
-    };
-
-    // Extract components used
-    const componentList = extractComponents(code);
-
-    // Ensure proper imports
-    if (!code.includes("from '@/components/ui'") && !code.includes('from "@/components/ui"')) {
-      const importLine = `import { ${componentList.join(', ')} } from '@/components/ui';\n`;
-      code = `import React from 'react';\n${importLine}\n${code}`;
+    let cleanResponse = response.trim();
+    if (cleanResponse.startsWith('`')) {
+        cleanResponse = cleanResponse.replace(/^`{3}(?:json)?\s*\n?/, '').replace(/\n?`{3}\s*$/, '');
     }
 
-    return { code, componentList, changes, changeDetails };
-  } catch (error) {
-    console.error('Modifier JSON parse error:', error);
-    return {
-      code: currentCode,
-      componentList: extractComponents(currentCode),
-      changes: 'Modification failed — original code preserved.',
-      changeDetails: { added: [], removed: [], modified: [] },
-    };
-  }
+    try {
+        const result = JSON.parse(cleanResponse);
+        let code = result.code || currentCode;
+        const changes = result.changes || 'Code modified based on your request.';
+        const changeDetails = {
+            added: result.added || [],
+            removed: result.removed || [],
+            modified: result.modified || [],
+        };
+
+        // Extract components used
+        const componentList = extractComponents(code);
+
+        // Ensure proper imports
+        if (!code.includes("from '@/components/ui'") && !code.includes('from "@/components/ui"')) {
+            const importLine = `import { ${componentList.join(', ')} } from '@/components/ui';\n`;
+            code = `import React from 'react';\n${importLine}\n${code}`;
+        }
+
+        return { code, componentList, changes, changeDetails };
+    } catch (error) {
+        console.error('Modifier JSON parse error:', error);
+        return {
+            code: currentCode,
+            componentList: extractComponents(currentCode),
+            changes: 'Modification failed — original code preserved.',
+            changeDetails: { added: [], removed: [], modified: [] },
+        };
+    }
 }
 
 function extractComponents(code: string): ComponentType[] {
-  const allowed: ComponentType[] = ['Button', 'Card', 'Input', 'Table', 'Modal', 'Sidebar', 'Navbar', 'Chart'];
-  return allowed.filter(comp => new RegExp(`<${comp}[\\s/>]`).test(code));
+    const allowed: ComponentType[] = ['Button', 'Card', 'Input', 'Table', 'Modal', 'Sidebar', 'Navbar', 'Chart'];
+    return allowed.filter(comp => new RegExp(`<${comp}[\\s/>]`).test(code));
 }
