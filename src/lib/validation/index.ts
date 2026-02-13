@@ -1,0 +1,2 @@
+export { isAllowedComponent, validateComponentUsage, getComponentDescriptions, getComponentSchema, COMPONENT_SCHEMA } from './componentRegistry';
+export { validateGeneratedCode, sanitizePrompt } from './codeValidator';
