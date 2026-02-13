@@ -4,6 +4,7 @@ import React, { useState, useCallback } from 'react';
 import styles from '@/styles/components/appLayout.module.css';
 import { ChatPanel } from '@/components/layout/ChatPanel';
 import { CodePanel } from '@/components/layout/CodePanel';
+import { VersionHistory } from '@/components/layout/VersionHistory';
 import { PreviewPanel } from '@/components/preview/PreviewPanel';
 import { ChatMessage, GenerationResult, ComponentNode, ComponentType, VersionEntry } from '@/types';
 
@@ -19,6 +20,7 @@ export default function Home() {
   const [currentVersion, setCurrentVersion] = useState<number | null>(null);
   const [versions, setVersions] = useState<VersionEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [activeTab, setActiveTab] = useState<ViewTab>('split');
   const [previewError, setPreviewError] = useState<string | undefined>();
 
@@ -62,17 +64,17 @@ export default function Home() {
 
       if (currentCode) {
         // Modification mode
-              response = await fetch('/api/modify', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                prompt: message,
-                currentCode,
-                currentVersion: currentVersion || 0,
-                previousLayout: previewLayout,
-                previousComponentList: componentList,
-              }),
-            });
+        response = await fetch('/api/modify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt: message,
+            currentCode,
+            currentVersion: currentVersion || 0,
+            previousLayout: previewLayout,
+            previousComponentList: componentList,
+          }),
+        });
       } else {
         // Generation mode
         response = await fetch('/api/generate', {
@@ -129,6 +131,7 @@ export default function Home() {
     setPreviewLayout(version.plan.layout);
     setCurrentVersion(version.version);
     setPreviewError(undefined);
+    setShowVersionHistory(false);
 
     const rollbackMsg: ChatMessage = {
       id: `system-${Date.now()}`,
@@ -176,6 +179,15 @@ export default function Home() {
         <div className={styles.topBarActions}>
           {currentVersion !== null && (
             <span className={styles.versionTag}>v{currentVersion}</span>
+          )}
+          {versions.length > 0 && (
+            <button
+              className={styles.topBarButton}
+              onClick={() => setShowVersionHistory(true)}
+              id="history-button"
+            >
+              📋 History ({versions.length})
+            </button>
           )}
           {versions.length > 1 && (
             <select
@@ -282,6 +294,15 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* Version History Modal */}
+      <VersionHistory
+        isOpen={showVersionHistory}
+        onClose={() => setShowVersionHistory(false)}
+        versions={versions}
+        currentVersion={currentVersion}
+        onRollback={handleRollback}
+      />
     </div>
   );
 }
