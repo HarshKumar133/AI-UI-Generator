@@ -1,149 +1,120 @@
-import { ALLOWED_COMPONENTS, ComponentType } from '@/types';
-
 // ============================================
-// Component Registry - Whitelist Enforcement
+// COMPONENT REGISTRY
+// Central registry of all allowed components
+// and their valid props — single source of truth
 // ============================================
 
-// Maps component names to their allowed props
-export const COMPONENT_SCHEMA: Record<ComponentType, { requiredProps: string[]; optionalProps: string[] }> = {
+export type ComponentType = 'Button' | 'Card' | 'Input' | 'Table' | 'Modal' | 'Sidebar' | 'Navbar' | 'Chart';
+
+export interface ComponentSchema {
+  name: ComponentType;
+  description: string;
+  allowedProps: string[];
+}
+
+export const COMPONENT_SCHEMA: Record<ComponentType, ComponentSchema> = {
   Button: {
-    requiredProps: ['children'],
-    optionalProps: ['variant', 'size', 'disabled', 'fullWidth', 'onClick', 'type'],
+    name: 'Button',
+    description: 'A clickable button with variant, size, and disabled support',
+    allowedProps: ['variant', 'size', 'disabled', 'onClick', 'children', 'type'],
   },
   Card: {
-    requiredProps: [],
-    optionalProps: ['title', 'subtitle', 'hoverable', 'padding', 'footer', 'headerAction', 'children'],
+    name: 'Card',
+    description: 'A content container with optional title, subtitle, and footer',
+    allowedProps: ['title', 'subtitle', 'footer', 'children'],
   },
   Input: {
-    requiredProps: [],
-    optionalProps: ['label', 'placeholder', 'value', 'onChange', 'type', 'disabled', 'required', 'error', 'helperText', 'size', 'multiline', 'rows'],
+    name: 'Input',
+    description: 'Text input field with label, placeholder, type, and error support',
+    allowedProps: ['label', 'placeholder', 'type', 'value', 'onChange', 'error', 'disabled'],
   },
   Table: {
-    requiredProps: ['columns', 'data'],
-    optionalProps: ['striped', 'hoverable', 'compact', 'emptyMessage'],
+    name: 'Table',
+    description: 'Data table with columns and rows',
+    allowedProps: ['columns', 'data', 'striped'],
   },
   Modal: {
-    requiredProps: ['isOpen', 'onClose'],
-    optionalProps: ['title', 'children', 'footer', 'size'],
+    name: 'Modal',
+    description: 'Overlay dialog box with title, content, and close behavior',
+    allowedProps: ['isOpen', 'onClose', 'title', 'children', 'size'],
   },
   Sidebar: {
-    requiredProps: ['groups'],
-    optionalProps: ['title', 'width', 'footer'],
+    name: 'Sidebar',
+    description: 'Side navigation panel with menu items',
+    allowedProps: ['items', 'title', 'collapsed'],
   },
   Navbar: {
-    requiredProps: [],
-    optionalProps: ['brand', 'brandIcon', 'links', 'actions'],
+    name: 'Navbar',
+    description: 'Top navigation bar with brand, links, and actions',
+    allowedProps: ['brand', 'items', 'actions'],
   },
   Chart: {
-    requiredProps: ['type', 'data'],
-    optionalProps: ['title'],
+    name: 'Chart',
+    description: 'Data visualization chart (bar, line, pie)',
+    allowedProps: ['type', 'data', 'title', 'height'],
   },
 };
 
-/**
- * Check if a component name is in the allowed list
- */
-export function isAllowedComponent(name: string): name is ComponentType {
-  return ALLOWED_COMPONENTS.includes(name as ComponentType);
+// Get allowed component names as a list
+export function getAllowedComponents(): ComponentType[] {
+  return Object.keys(COMPONENT_SCHEMA) as ComponentType[];
 }
 
-/**
- * Validate that code only uses allowed components
- * Returns list of violations
- */
-export function validateComponentUsage(code: string): {
-  isValid: boolean;
-  violations: string[];
-  usedComponents: ComponentType[];
-} {
-  const violations: string[] = [];
-  const usedComponents: ComponentType[] = [];
-
-  // Match JSX component usage: <ComponentName or <ComponentName>
-  const componentRegex = /<([A-Z][a-zA-Z0-9]*)/g;
-  let match;
-
-  while ((match = componentRegex.exec(code)) !== null) {
-    const componentName = match[1];
-    if (isAllowedComponent(componentName)) {
-      if (!usedComponents.includes(componentName)) {
-        usedComponents.push(componentName);
-      }
-    } else {
-      // Skip common React/HTML patterns that start with uppercase
-      const htmlExceptions = ['React', 'Fragment'];
-      if (!htmlExceptions.includes(componentName)) {
-        violations.push(`Unauthorized component used: <${componentName}>. Only these are allowed: ${ALLOWED_COMPONENTS.join(', ')}`);
-      }
-    }
-  }
-
-  // Check for inline styles (prohibited)
-  if (/style\s*=\s*\{/g.test(code)) {
-    violations.push('Inline styles are prohibited. Components use CSS Modules internally.');
-  }
-
-  // Check for arbitrary CSS class generation
-  if (/className\s*=\s*{(?!.*styles)/g.test(code)) {
-    // Allow className={styles.xxx} pattern but flag arbitrary strings
-    const classNameRegex = /className\s*=\s*["'][^"']*["']/g;
-    const classMatches = code.match(classNameRegex);
-    if (classMatches) {
-      // Allow layout classes only
-      const allowedClasses = ['layout-', 'grid-', 'flex-', 'container', 'wrapper', 'section'];
-      classMatches.forEach(cm => {
-        const value = cm.replace(/className\s*=\s*["']/, '').replace(/["']$/, '');
-        const isAllowed = allowedClasses.some(ac => value.includes(ac));
-        if (!isAllowed && value.length > 0) {
-          // This is a soft warning, not a violation
-        }
-      });
-    }
-  }
-
-  return {
-    isValid: violations.length === 0,
-    violations,
-    usedComponents,
-  };
-}
-
-/**
- * Get the schema for a specific component
- */
-export function getComponentSchema(name: ComponentType) {
-  return COMPONENT_SCHEMA[name];
-}
-
-/**
- * Get a description of all allowed components for AI prompts
- */
+// Get descriptions for LLM prompts
 export function getComponentDescriptions(): string {
-  return `
-ALLOWED COMPONENTS (you may ONLY use these):
+  const descriptions = Object.values(COMPONENT_SCHEMA)
+    .map(schema => `- <${schema.name}>: ${schema.description}. Props: ${schema.allowedProps.join(', ')}`)
+    .join('\n');
 
-1. **Button** - Clickable button element
-   Props: children (required), variant ("primary"|"secondary"|"outline"|"ghost"|"danger"), size ("sm"|"md"|"lg"), disabled (boolean), fullWidth (boolean), onClick (function)
+  return `ALLOWED COMPONENTS (use ONLY these):\n${descriptions}`;
+}
 
-2. **Card** - Container card with optional header/footer
-   Props: title (string), subtitle (string), hoverable (boolean), padding ("normal"|"compact"|"none"), footer (ReactNode), headerAction (ReactNode), children (ReactNode)
+// Validate that only allowed components are used in code
+export function validateComponentUsage(code: string): { valid: boolean; violations: string[] } {
+  const violations: string[] = [];
 
-3. **Input** - Text input field
-   Props: label (string), placeholder (string), value (string), onChange (function), type ("text"|"email"|"password"|"number"|"search"|"url"), disabled (boolean), required (boolean), error (string), helperText (string), size ("sm"|"md"|"lg"), multiline (boolean), rows (number)
+  // Check for JSX tags that aren't in our allowed list
+  const jsxTagRegex = /<([A-Z][a-zA-Z]*)/g;
+  let match;
+  const allowedSet = new Set(getAllowedComponents());
+  const exceptions = new Set(['React', 'Fragment', 'GeneratedUI']);
 
-4. **Table** - Data table
-   Props: columns (required, array of {key, header, width?}), data (required, array of row objects), striped (boolean), hoverable (boolean), compact (boolean), emptyMessage (string)
+  while ((match = jsxTagRegex.exec(code)) !== null) {
+    const tag = match[1];
+    if (!allowedSet.has(tag as ComponentType) && !exceptions.has(tag)) {
+      violations.push(`<${tag}> is not an allowed component`);
+    }
+  }
 
-5. **Modal** - Dialog/popup overlay
-   Props: isOpen (required, boolean), onClose (required, function), title (string), children (ReactNode), footer (ReactNode), size ("sm"|"md"|"lg"|"xl")
+  return { valid: violations.length === 0, violations };
+}
 
-6. **Sidebar** - Side navigation panel
-   Props: groups (required, array of {label?, items: [{id, label, icon?, active?, onClick?}]}), title (string), width ("sm"|"md"|"lg"), footer (ReactNode)
+// Sanitize user prompts to prevent injection
+export function sanitizePrompt(prompt: string): string {
+  if (!prompt) return '';
 
-7. **Navbar** - Top navigation bar
-   Props: brand (string), brandIcon (string), links (array of {id, label, active?, onClick?}), actions (ReactNode)
+  let sanitized = prompt.trim();
 
-8. **Chart** - Data visualization
-   Props: type (required, "bar"|"pie"), data (required, array of {label, value, color?}), title (string)
-`.trim();
+  // Remove potential prompt injections
+  const injectionPatterns = [
+    /ignore\s+(all\s+)?(previous|above|prior)\s+(instructions|rules|prompts)/gi,
+    /system\s*:\s*/gi,
+    /you\s+are\s+now\s+/gi,
+    /forget\s+(all\s+)?(previous|your)\s+/gi,
+    /\bpretend\s+/gi,
+    /act\s+as\s+(if|a)\s+/gi,
+    /override\s+(all\s+)?/gi,
+    /```[\s\S]*?```/g, // Remove code blocks from prompts
+  ];
+
+  for (const pattern of injectionPatterns) {
+    sanitized = sanitized.replace(pattern, '[filtered] ');
+  }
+
+  // Limit length
+  if (sanitized.length > 2000) {
+    sanitized = sanitized.substring(0, 2000) + '...';
+  }
+
+  return sanitized;
 }
