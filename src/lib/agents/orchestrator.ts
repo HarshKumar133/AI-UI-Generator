@@ -20,7 +20,6 @@ export async function orchestrateGeneration(
   userPrompt: string,
   currentVersion: number
 ): Promise<GenerationResult> {
-  // Step 0: Sanitize the prompt
   const sanitizedPrompt = sanitizePrompt(userPrompt);
 
   console.log('[Orchestrator] Step 1: Running Planner...');
@@ -31,11 +30,9 @@ export async function orchestrateGeneration(
   const generation = await runGenerator(plan);
   console.log('[Orchestrator] Generator complete. Components used:', generation.componentList);
 
-  // Validate the generated code
   const validation = validateGeneratedCode(generation.code);
   if (!validation.isValid) {
     console.warn('[Orchestrator] Validation warnings:', validation.errors);
-    // We still proceed but log the issues
   }
 
   console.log('[Orchestrator] Step 3: Running Explainer...');
@@ -52,38 +49,46 @@ export async function orchestrateGeneration(
   };
 }
 
-// ---- MODIFY: Iterative edit pipeline ----
+// ---- MODIFY: Iterative edit pipeline (context-aware) ----
 
 export async function orchestrateModification(
-  request: ModifyRequest
+  request: ModifyRequest & { previousLayout?: string; previousComponentList?: string[] }
 ): Promise<GenerationResult> {
   const sanitizedPrompt = sanitizePrompt(request.prompt);
 
   console.log('[Orchestrator] Modification requested:', sanitizedPrompt);
 
-  // Step 1: Run modifier (specialized planner + generator for edits)
-  console.log('[Orchestrator] Step 1: Running Modifier...');
-  const { code, componentList, changes } = await runModifier(
+  // Step 1: Run modifier with previous context
+  console.log('[Orchestrator] Step 1: Running Modifier (context-aware)...');
+  const { code, componentList, changes, changeDetails } = await runModifier(
     sanitizedPrompt,
-    request.currentCode
+    request.currentCode,
+    {
+      layout: request.previousLayout,
+      componentList: request.previousComponentList as import('@/types').ComponentType[],
+    }
   );
 
-  // Validate the modified code
   const validation = validateGeneratedCode(code);
   if (!validation.isValid) {
     console.warn('[Orchestrator] Validation warnings:', validation.errors);
   }
 
-  // Step 2: Create an explanation of the changes
+  // Step 2: Create explanation with change details
   console.log('[Orchestrator] Step 2: Creating explanation...');
+  const changeSummary = [
+    changeDetails.added.length > 0 ? `Added: ${changeDetails.added.join(', ')}` : '',
+    changeDetails.removed.length > 0 ? `Removed: ${changeDetails.removed.join(', ')}` : '',
+    changeDetails.modified.length > 0 ? `Modified: ${changeDetails.modified.join(', ')}` : '',
+  ].filter(Boolean).join('. ');
+
   const plan = {
-    layout: 'single-column' as const,
+    layout: (request.previousLayout || 'single-column') as 'single-column' | 'two-column' | 'sidebar-layout' | 'dashboard' | 'centered' | 'full-width',
     components: [],
-    reasoning: `Modification: ${changes}`,
+    reasoning: `Modification: ${changes}${changeSummary ? `. ${changeSummary}` : ''}`,
   };
 
   const generation = { code, componentList };
-
   const explanation = await runExplainer(sanitizedPrompt, plan, generation);
 
   return {

@@ -62,15 +62,17 @@ export default function Home() {
 
       if (currentCode) {
         // Modification mode
-        response = await fetch('/api/modify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            prompt: message,
-            currentCode,
-            currentVersion: currentVersion || 0,
-          }),
-        });
+              response = await fetch('/api/modify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                prompt: message,
+                currentCode,
+                currentVersion: currentVersion || 0,
+                previousLayout: previewLayout,
+                previousComponentList: componentList,
+              }),
+            });
       } else {
         // Generation mode
         response = await fetch('/api/generate', {

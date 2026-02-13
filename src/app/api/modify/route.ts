@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { orchestrateModification } from '@/lib/agents';
-import { ModifyRequest, ApiResponse, GenerationResult, VersionEntry } from '@/types';
-
-// Shared store — in production, use Supabase
-// For now we use a module-level import pattern
-import { getVersionHistory, addVersion } from '../_store';
+import { ApiResponse, GenerationResult } from '@/types';
+import { addVersion } from '../_store';
 
 export async function POST(request: NextRequest) {
   try {
-    const body: ModifyRequest = await request.json();
+    const body = await request.json();
 
     if (!body.prompt || body.prompt.trim().length === 0) {
       return NextResponse.json<ApiResponse<null>>(
@@ -24,9 +21,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result: GenerationResult = await orchestrateModification(body);
+    const result: GenerationResult = await orchestrateModification({
+      prompt: body.prompt,
+      currentCode: body.currentCode,
+      currentVersion: body.currentVersion || 0,
+      previousLayout: body.previousLayout,
+      previousComponentList: body.previousComponentList,
+    });
 
-    // Store version
     addVersion({
       version: result.version,
       code: result.generation.code,

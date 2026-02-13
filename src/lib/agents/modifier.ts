@@ -2,6 +2,7 @@
 // MODIFIER AGENT
 // Handles iterative edits to existing code
 // Modifies existing code rather than full regeneration
+// Context-aware: receives previous plan and explanation
 // ============================================
 
 import { ComponentType } from '@/types';
@@ -13,9 +14,10 @@ import { getComponentDescriptions } from '../validation';
 const MODIFIER_SYSTEM_PROMPT = `You are the MODIFIER agent in a deterministic UI generation pipeline.
 
 Your job is to MODIFY existing React code based on user instructions.
+You must make MINIMAL, TARGETED changes — never rewrite the entire component unless explicitly asked.
 
 CRITICAL RULES:
-- You MUST preserve the existing code structure as much as possible
+- PRESERVE the existing code structure as much as possible
 - Only change what the user explicitly asks for
 - You may ONLY use components from the allowed list
 - NO inline styles on components (only on layout wrapper divs for flex/grid)
@@ -23,21 +25,28 @@ CRITICAL RULES:
 - NO external imports
 - Maintain the "GeneratedUI" function name and default export
 - Import components ONLY from '@/components/ui'
+- If user says "add", ADD to existing — don't replace
+- If user says "remove", REMOVE only that — keep everything else
+- If user says "change", MODIFY only the targeted part
 
 ${getComponentDescriptions()}
 
 MODIFICATION APPROACH:
-1. Identify what the user wants changed
-2. Make MINIMAL changes to achieve the goal
-3. Preserve all unchanged parts exactly as they are
-4. If adding components, use only allowed ones
-5. If removing components, clean up properly
+1. Read the current code carefully
+2. Identify EXACTLY what the user wants changed
+3. Make the MINIMUM changes needed
+4. Preserve ALL unchanged parts exactly as they are
+5. Update imports if components were added/removed
+6. NEVER remove components the user didn't mention
 
 OUTPUT FORMAT:
-Return a JSON object with:
+Return a JSON object with these fields:
 {
   "code": "<the complete modified TSX code>",
-  "changes": "<brief description of what was changed and why>"
+  "changes": "<brief description of what was changed>",
+  "added": ["<components added, if any>"],
+  "removed": ["<components removed, if any>"],
+  "modified": ["<components modified, if any>"]
 }
 
 Return ONLY the JSON, no markdown, no code fences.`;
@@ -46,23 +55,37 @@ Return ONLY the JSON, no markdown, no code fences.`;
 
 export async function runModifier(
   modificationPrompt: string,
-  currentCode: string
-): Promise<{ code: string; componentList: ComponentType[]; changes: string }> {
+  currentCode: string,
+  previousContext?: { layout?: string; componentList?: ComponentType[] }
+): Promise<{
+  code: string;
+  componentList: ComponentType[];
+  changes: string;
+  changeDetails: { added: string[]; removed: string[]; modified: string[] };
+}> {
+  const contextInfo = previousContext
+    ? `\nPrevious context:
+- Layout: ${previousContext.layout || 'unknown'}
+- Components in use: ${previousContext.componentList?.join(', ') || 'unknown'}`
+    : '';
+
   const userMessage = `Current code:
 \`\`\`tsx
 ${currentCode}
 \`\`\`
+${contextInfo}
 
 User wants this modification:
 "${modificationPrompt}"
 
-Modify the code according to the user's request. Remember:
-- Make MINIMAL changes, do NOT rewrite everything
+IMPORTANT:
+- Make MINIMAL changes to achieve the user's request
+- Do NOT rewrite the entire component
 - Preserve all parts the user didn't mention
-- Only use allowed components
+- Only use allowed components (Button, Card, Input, Table, Modal, Sidebar, Navbar, Chart)
 - Keep the GeneratedUI function name and default export
 
-Return ONLY the JSON with "code" and "changes" fields.`;
+Return ONLY the JSON with "code", "changes", "added", "removed", and "modified" fields.`;
 
   const response = await callGemini(userMessage, MODIFIER_SYSTEM_PROMPT);
 
@@ -75,6 +98,11 @@ Return ONLY the JSON with "code" and "changes" fields.`;
     const result = JSON.parse(cleanResponse);
     let code = result.code || currentCode;
     const changes = result.changes || 'Code modified based on your request.';
+    const changeDetails = {
+      added: result.added || [],
+      removed: result.removed || [],
+      modified: result.modified || [],
+    };
 
     // Extract components used
     const componentList = extractComponents(code);
@@ -85,14 +113,14 @@ Return ONLY the JSON with "code" and "changes" fields.`;
       code = `import React from 'react';\n${importLine}\n${code}`;
     }
 
-    return { code, componentList, changes };
+    return { code, componentList, changes, changeDetails };
   } catch (error) {
     console.error('Modifier JSON parse error:', error);
-    // Return original code unchanged on error
     return {
       code: currentCode,
       componentList: extractComponents(currentCode),
       changes: 'Modification failed — original code preserved.',
+      changeDetails: { added: [], removed: [], modified: [] },
     };
   }
 }
