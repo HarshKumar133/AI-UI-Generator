@@ -1,244 +1,219 @@
-# ✨ Deterministic UI Generator
+# 🎨 AI UI Generator
 
-> An AI-powered UI generator that converts natural language descriptions into working React code using a fixed, deterministic component library.
+A powerful Next.js application that generates beautiful, production-ready UI components using AI (Google Gemini). Built with TypeScript, React, and a deterministic multi-agent architecture.
 
-**Built by Harsh Kumar**
+![AI UI Generator](https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=for-the-badge&logo=typescript)
+![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
----
+## ✨ Features
 
-## 🎯 Overview
+- **🤖 AI-Powered Generation**: Uses Google Gemini with a multi-agent architecture (Planner → Generator → Explainer)
+- **🎯 Deterministic Output**: Predictable, high-quality UI components every time
+- **🔄 Iterative Modifications**: Chat-based interface to refine your designs
+- **📦 8 Premium Components**: Button, Card, Input, Table, Modal, Sidebar, Navbar, Chart
+- **🎨 Glassmorphism Design**: Modern dark theme with gradients, glows, and animations
+- **📊 Rich Layouts**: Dashboard, sidebar, two-column, and more
+- **⚡ Live Preview**: See your UI in real-time with version history
+- **💾 Version Control**: Rollback to any previous version
+- **📝 Code Export**: Copy generated React/TypeScript code
 
-This application uses a multi-agent AI pipeline to interpret user intent and generate React UIs from natural language. Unlike general-purpose code generators, this system is **deterministic** — it uses a fixed set of 8 pre-approved components with predefined styles, ensuring consistent, predictable output every time.
-
-### Key Features
-
-- **3-Panel Interface** — Chat (left), Code Editor (center), Live Preview (right)
-- **Natural Language → UI** — Describe what you want, get working code
-- **Deterministic Output** — Fixed component library, no AI-generated CSS
-- **Iterative Editing** — Modify existing UIs with follow-up prompts
-- **Version History** — Track all generations with one-click rollback
-- **Live Preview** — See your UI rendered in real-time
-- **Safety First** — Prompt sanitization, code validation, error boundaries
-
----
-
-## 🏗️ Architecture
-
-### Agent Pipeline (3-Step)
-
-```
-User Prompt
-    │
-    ▼
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   PLANNER   │ ──▶ │  GENERATOR  │ ──▶ │  EXPLAINER  │
-│             │     │             │     │             │
-│ Interprets  │     │ Converts    │     │ Explains    │
-│ intent,     │     │ plan to     │     │ decisions   │
-│ selects     │     │ React/TSX   │     │ in plain    │
-│ layout &    │     │ code        │     │ English     │
-│ components  │     │             │     │             │
-└─────────────┘     └─────────────┘     └─────────────┘
-      JSON               TSX               JSON
-
-For modifications:
-┌─────────────┐
-│  MODIFIER   │ ──▶ Makes minimal, targeted edits
-│  (replaces  │     to existing code
-│   Planner + │
-│   Generator)│
-└─────────────┘
-```
-
-### Deterministic Component Library (8 Components)
-
-| Component | Description | Key Props |
-|-----------|-------------|-----------|
-| `Button` | Clickable button | `variant`, `size`, `disabled` |
-| `Card` | Content container | `title`, `subtitle`, `footer` |
-| `Input` | Text input field | `label`, `placeholder`, `type`, `error` |
-| `Table` | Data table | `columns`, `data`, `striped` |
-| `Modal` | Overlay dialog | `isOpen`, `onClose`, `title`, `size` |
-| `Sidebar` | Side navigation | `items`, `title`, `collapsed` |
-| `Navbar` | Top navigation | `brand`, `items`, `actions` |
-| `Chart` | Data visualization | `type`, `data`, `title`, `height` |
-
-### Constraints (By Design)
-
-- ✅ Only 8 pre-approved components
-- ✅ CSS Modules for all styling (no inline styles on components)
-- ✅ No AI-generated CSS
-- ✅ No external UI libraries
-- ✅ No arbitrary Tailwind classes
-- ✅ Prompt injection protection
-- ✅ Code validation before rendering
-
----
-
-## 📁 Project Structure
-
-```
-src/
-├── app/
-│   ├── api/
-│   │   ├── generate/route.ts    # POST — full generation pipeline
-│   │   ├── modify/route.ts      # POST — iterative modification
-│   │   ├── versions/route.ts    # GET  — version history
-│   │   ├── rollback/route.ts    # POST — rollback to version
-│   │   └── _store.ts            # In-memory version store
-│   ├── globals.css              # Design system tokens
-│   ├── layout.tsx               # Root layout
-│   └── page.tsx                 # Main 3-panel app
-├── components/
-│   ├── ui/                      # 8 deterministic components
-│   │   ├── Button.tsx
-│   │   ├── Card.tsx
-│   │   ├── Input.tsx
-│   │   ├── Table.tsx
-│   │   ├── Modal.tsx
-│   │   ├── Sidebar.tsx
-│   │   ├── Navbar.tsx
-│   │   ├── Chart.tsx
-│   │   └── index.ts             # Barrel export
-│   ├── layout/
-│   │   ├── ChatPanel.tsx        # AI chat interface
-│   │   ├── CodePanel.tsx        # Code editor with syntax highlight
-│   │   └── VersionHistory.tsx   # Version history modal
-│   ├── preview/
-│   │   ├── PreviewPanel.tsx     # Live preview container
-│   │   └── ComponentRenderer.tsx # Dynamic component renderer
-│   └── ErrorBoundary.tsx        # React error boundary
-├── lib/
-│   ├── agents/
-│   │   ├── geminiClient.ts      # Gemini LLM client
-│   │   ├── planner.ts           # Step 1: Intent → Plan
-│   │   ├── generator.ts         # Step 2: Plan → Code
-│   │   ├── explainer.ts         # Step 3: Code → Explanation
-│   │   ├── modifier.ts          # Iterative edit agent
-│   │   ├── orchestrator.ts      # Pipeline coordinator
-│   │   └── index.ts             # Barrel export
-│   └── validation/
-│       ├── componentRegistry.ts # Component schemas & sanitizer
-│       ├── codeValidator.ts     # Generated code validation
-│       └── index.ts             # Barrel export
-├── styles/
-│   └── components/              # CSS Modules for each component
-│       ├── button.module.css
-│       ├── card.module.css
-│       ├── input.module.css
-│       ├── table.module.css
-│       ├── modal.module.css
-│       ├── sidebar.module.css
-│       ├── navbar.module.css
-│       ├── chart.module.css
-│       ├── chatPanel.module.css
-│       ├── codePanel.module.css
-│       ├── previewPanel.module.css
-│       ├── versionHistory.module.css
-│       └── appLayout.module.css
-└── types/
-    └── index.ts                 # TypeScript type definitions
-```
-
----
-
-## 🚀 Getting Started
+## 🚀 Quick Start
 
 ### Prerequisites
 
-- **Node.js** 18+ and npm
-- **Gemini API Key** — Get one from [Google AI Studio](https://aistudio.google.com/apikey)
+- Node.js 18+ installed
+- A Google Gemini API key ([Get one here](https://aistudio.google.com/apikey))
 
 ### Installation
 
+1. Clone the repository:
 ```bash
-# Clone the repository
-git clone https://github.com/HarshKumar133/AI-UI-Generator-Assignment-HarshKumar.git
+git clone <your-repo-url>
 cd AI-UI-Generator-Assignment-HarshKumar
+```
 
-# Install dependencies
+2. Install dependencies:
+```bash
 npm install
-
-# Set up environment variables
-cp .env.example .env.local
-# Edit .env.local and add your Gemini API key
 ```
 
-### Environment Variables
+3. Set up environment variables:
+```bash
+cp .env.local.example .env.local
+```
 
-Create a `.env.local` file:
-
+4. Add your Gemini API key to `.env.local`:
 ```env
-GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_API_KEY=your_actual_api_key_here
 ```
 
-### Running the App
-
+5. Run the development server:
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+6. Open [http://localhost:3000](http://localhost:3000) in your browser
+
+## 📦 Project Structure
+
+```
+src/
+├── app/                    # Next.js App Router
+│   ├── api/               # API routes (generate, modify, etc.)
+│   ├── page.tsx           # Main UI
+│   └── globals.css        # Global styles
+├── components/
+│   ├── ui/                # 8 core UI components
+│   └── preview/           # Preview renderer
+├── lib/
+│   ├── agents/            # AI agent system
+│   │   ├── planner.ts     # Component planning
+│   │   ├── generator.ts   # Code generation
+│   │   ├── modifier.ts    # Iterative edits
+│   │   └── explainer.ts   # Code explanations
+│   └── validation/        # Schema & validation
+└── styles/
+    └── components/        # Component CSS modules
+```
+
+## 🎯 How It Works
+
+### Multi-Agent Architecture
+
+1. **Planner Agent**: Analyzes user intent → Creates structured component plan
+2. **Generator Agent**: Converts plan → React/TypeScript code
+3. **Explainer Agent**: Generates clear documentation
+4. **Modifier Agent**: Handles iterative refinements
+
+### Example Flow
+
+```
+User: "Build a sales analytics dashboard"
+  ↓
+Planner: Creates JSON plan with Sidebar, Navbar, Charts, Tables
+  ↓
+Generator: Converts to React code with realistic data
+  ↓
+Explainer: Documents the UI structure
+  ↓
+Preview: Renders live preview
+```
+
+## 🌐 Deploy to Vercel
+
+### Option 1: Deploy via Vercel CLI
+
+1. Install Vercel CLI:
+```bash
+npm i -g vercel
+```
+
+2. Deploy:
+```bash
+vercel
+```
+
+3. Follow the prompts and add your `GEMINI_API_KEY` as an environment variable when asked.
+
+### Option 2: Deploy via Vercel Dashboard
+
+1. Push your code to GitHub
+2. Go to [Vercel](https://vercel.com)
+3. Click "Import Project"
+4. Select your repository
+5. Add environment variable:
+   - Key: `GEMINI_API_KEY`
+   - Value: Your Gemini API key
+6. Click "Deploy"
+
+### Option 3: One-Click Deploy
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=<your-repo-url>&env=GEMINI_API_KEY&envDescription=Get%20your%20Gemini%20API%20key%20from%20Google%20AI%20Studio&envLink=https://aistudio.google.com/apikey)
+
+## 🎨 Available Components
+
+| Component | Description | Props |
+|-----------|-------------|-------|
+| **Button** | Interactive buttons with 5 variants | `variant`, `size`, `disabled` |
+| **Card** | Content containers with headers/footers | `title`, `subtitle`, `footer` |
+| **Input** | Form inputs with labels & validation | `label`, `placeholder`, `type`, `error` |
+| **Table** | Data tables with sorting & striping | `columns`, `data`, `striped` |
+| **Chart** | Bar, line, and pie charts | `type`, `data`, `title`, `height` |
+| **Sidebar** | Navigation sidebars with groups | `groups`, `title`, `collapsed` |
+| **Navbar** | Top navigation bars | `brand`, `items`, `actions` |
+| **Modal** | Overlay dialogs | `isOpen`, `title`, `size`, `onClose` |
+
+## 🔧 Configuration
+
+### Customize the AI Behavior
+
+Edit `src/lib/agents/planner.ts` to change:
+- Layout preferences
+- Component selection logic
+- Data generation rules
+
+### Extend with New Components
+
+1. Create component in `src/components/ui/YourComponent.tsx`
+2. Add CSS module in `src/styles/components/yourComponent.module.css`
+3. Register in `src/lib/validation/componentRegistry.ts`
+4. Export from `src/components/ui/index.ts`
+
+## 📊 Tech Stack
+
+- **Framework**: Next.js 16 (App Router)
+- **Language**: TypeScript 5
+- **Styling**: CSS Modules (Glassmorphism design)
+- **AI**: Google Gemini 1.5 Flash
+- **State**: React useState (local-first)
+- **Icons**: Emoji-based (no dependencies)
+
+## 🎯 Example Prompts
+
+Try these prompts to see the power:
+
+- "Build a sales analytics dashboard for my SaaS company"
+- "Create an e-commerce admin panel with order tracking"
+- "Design a restaurant management system with menu analytics"
+- "Make a fitness app dashboard with workout stats"
+- "Build a CRM interface with customer data tables"
+
+## 🐛 Troubleshooting
+
+### Build Errors
+
+```bash
+# Clear cache and rebuild
+rm -rf .next node_modules
+npm install
+npm run build
+```
+
+### API Key Issues
+
+Make sure your `.env.local` has the correct key:
+```env
+GEMINI_API_KEY=AIzaSy...
+```
+
+### Preview Not Updating
+
+Click "Regenerate" or clear the chat and start fresh.
+
+## 📝 License
+
+MIT License - feel free to use this for personal or commercial projects!
+
+## 🙏 Credits
+
+Built by [Harsh Kumar](https://github.com/HarshKumar133)
+
+Powered by:
+- Google Gemini AI
+- Next.js
+- Vercel
 
 ---
 
-## 🧪 Usage
-
-### Generate a UI
-
-1. Type a description in the chat panel: *"Create a dashboard with a navbar, sidebar, stats cards, and a bar chart"*
-2. Wait for the 3-step pipeline (Plan → Generate → Explain)
-3. View the generated code and live preview
-
-### Modify an Existing UI
-
-1. After generating, type a modification: *"Add a login modal with email and password inputs"*
-2. The Modifier agent makes minimal, targeted changes
-3. Previous structure is preserved
-
-### Rollback
-
-1. Click **📋 History** in the top bar
-2. Click **⏪ Restore** on any previous version
-3. The UI reverts to that version
-
----
-
-## 🛡️ Safety & Validation
-
-| Layer | Protection |
-|-------|------------|
-| **Prompt Sanitization** | Injection pattern detection, length limits |
-| **Component Whitelist** | Only 8 approved components allowed |
-| **Code Validation** | Prohibited pattern detection (eval, fetch, innerHTML) |
-| **Error Boundary** | Catches rendering crashes gracefully |
-| **No External Imports** | Generated code cannot import external packages |
-
----
-
-## 🛠️ Tech Stack
-
-| Technology | Purpose |
-|------------|---------|
-| **Next.js 15** | React framework (App Router) |
-| **TypeScript** | Type safety |
-| **Gemini API** | LLM for AI agents |
-| **CSS Modules** | Component styling |
-| **react-syntax-highlighter** | Code display |
-
----
-
-## 📝 API Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/generate` | Generate new UI from prompt |
-| `POST` | `/api/modify` | Modify existing UI code |
-| `GET` | `/api/versions` | Get version history |
-| `POST` | `/api/rollback` | Rollback to specific version |
-
----
-
-## 📜 License
-
-MIT License — see [LICENSE](LICENSE) for details.
+**⭐ Star this repo if you found it helpful!**
