@@ -16,14 +16,25 @@ export interface TableProps {
     emptyMessage?: string;
 }
 
+function renderCellValue(value: unknown): React.ReactNode {
+    if (value === null || value === undefined) return '';
+    if (Array.isArray(value)) {
+        return value.map((v, i) => <span key={`v-${i}`}>{String(v)}</span>);
+    }
+    if (typeof value === 'object') return JSON.stringify(value);
+    return String(value);
+}
+
 export const Table: React.FC<TableProps> = ({
-    columns,
-    data,
+    columns: columnsProp,
+    data: dataProp,
     striped = false,
     hoverable = true,
     compact = false,
     emptyMessage = 'No data available',
 }) => {
+    const columns = columnsProp || [];
+    const data = dataProp || [];
     const wrapperClass = `${styles.tableWrapper} ${striped ? styles.striped : ''} ${hoverable ? styles.hoverable : ''} ${compact ? styles.compact : ''}`;
 
     return (
@@ -31,8 +42,8 @@ export const Table: React.FC<TableProps> = ({
             <table className={styles.table}>
                 <thead>
                     <tr>
-                        {columns.map((col) => (
-                            <th key={col.key} className={styles.th} style={col.width ? { width: col.width } : undefined}>
+                        {columns.map((col, idx) => (
+                            <th key={`th-${idx}-${col.key}`} className={styles.th} style={col.width ? { width: col.width } : undefined}>
                                 {col.header}
                             </th>
                         ))}
@@ -49,8 +60,8 @@ export const Table: React.FC<TableProps> = ({
                         data.map((row, i) => (
                             <tr key={`row-${i}`} className={styles.tr}>
                                 {columns.map((col, j) => (
-                                    <td key={`cell-${i}-${j}-${col.key}`} className={styles.td}>
-                                        {row[col.key] ?? ''}
+                                    <td key={`cell-${i}-${j}`} className={styles.td}>
+                                        {renderCellValue(row[col.key])}
                                     </td>
                                 ))}
                             </tr>

@@ -4,7 +4,7 @@
 // ============================================
 
 import { PlannerOutput } from '@/types';
-import { callLLM } from './llmClient';
+import { callGemini } from './geminiClient';
 import { getComponentDescriptions } from '../validation';
 
 // ---- PROMPT TEMPLATE (Hard-coded, visible in code as required) ----
@@ -69,7 +69,7 @@ Analyze this request and create a structured component plan. Remember:
 
 Output ONLY the JSON plan, no other text.`;
 
-    const response = await callLLM(userMessage, PLANNER_SYSTEM_PROMPT);
+    const response = await callGemini(userMessage, PLANNER_SYSTEM_PROMPT);
 
     // Parse the JSON response, stripping any markdown fences the model might add
     let cleanResponse = response.trim();

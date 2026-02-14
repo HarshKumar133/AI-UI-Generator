@@ -5,7 +5,7 @@
 // ============================================
 
 import { PlannerOutput, GeneratorOutput, ComponentType } from '@/types';
-import { callLLM } from './llmClient';
+import { callGemini } from './geminiClient';
 import { getComponentDescriptions } from '../validation';
 
 // ---- PROMPT TEMPLATE (Hard-coded, visible in code as required) ----
@@ -76,7 +76,7 @@ ${getLayoutGuidance(plan.layout)}
 
 Return ONLY the TSX code, nothing else.`;
 
-    const response = await callLLM(userMessage, GENERATOR_SYSTEM_PROMPT);
+    const response = await callGemini(userMessage, GENERATOR_SYSTEM_PROMPT);
 
     // Clean the response
     let code = response.trim();

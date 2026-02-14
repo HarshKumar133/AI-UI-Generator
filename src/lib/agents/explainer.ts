@@ -5,7 +5,7 @@
 // ============================================
 
 import { PlannerOutput, GeneratorOutput, ExplainerOutput } from '@/types';
-import { callLLM } from './llmClient';
+import { callGemini } from './geminiClient';
 
 // ---- PROMPT TEMPLATE (Hard-coded, visible in code as required) ----
 
@@ -53,7 +53,7 @@ Explain the decisions made. Why was this layout chosen? Why was each component s
 
 Output ONLY the JSON explanation, no other text.`;
 
-    const response = await callLLM(userMessage, EXPLAINER_SYSTEM_PROMPT);
+    const response = await callGemini(userMessage, EXPLAINER_SYSTEM_PROMPT);
 
     // Clean the response
     let cleanResponse = response.trim();

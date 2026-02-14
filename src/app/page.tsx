@@ -197,8 +197,8 @@ export default function Home() {
               id="version-select"
             >
               <option value="" disabled>⏪ Rollback</option>
-              {versions.map((v) => (
-                <option key={v.version} value={v.version}>
+              {versions.map((v, idx) => (
+                <option key={`opt-${idx}-${v.version}`} value={v.version}>
                   v{v.version} — {v.prompt.slice(0, 30)}...
                 </option>
               ))}
