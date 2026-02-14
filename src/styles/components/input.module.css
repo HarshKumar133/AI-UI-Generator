@@ -1,13 +1,14 @@
 .inputWrapper {
   display: flex;
   flex-direction: column;
-  gap: var(--space-xs);
+  gap: 6px;
 }
 
 .label {
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   font-weight: 500;
   color: var(--color-text-secondary);
+  letter-spacing: 0.01em;
 }
 
 .required {
@@ -26,21 +27,24 @@
   font-family: var(--font-sans);
   font-size: 0.9rem;
   color: var(--color-text-primary);
-  background: var(--color-bg-tertiary);
-  border: 1px solid var(--color-border);
+  background: rgba(26, 26, 46, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: var(--radius-md);
-  padding: 10px 14px;
+  padding: 11px 16px;
   outline: none;
   transition: all var(--transition-fast);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .input:focus {
-  border-color: var(--color-accent-primary);
-  box-shadow: 0 0 0 3px var(--color-accent-glow);
+  border-color: rgba(124, 110, 240, 0.5);
+  box-shadow: 0 0 0 3px rgba(124, 110, 240, 0.1), inset 0 1px 3px rgba(0, 0, 0, 0.1);
+  background: rgba(26, 26, 46, 0.8);
 }
 
 .input::placeholder {
   color: var(--color-text-muted);
+  font-weight: 400;
 }
 
 .input:disabled {
@@ -64,16 +68,16 @@
 }
 
 .errorInput {
-  border-color: var(--color-error);
+  border-color: rgba(248, 113, 113, 0.5);
 }
 
 .errorInput:focus {
-  box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.15);
+  box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.12);
 }
 
 /* Sizes */
 .sm .input {
-  padding: 6px 10px;
+  padding: 7px 12px;
   font-size: 0.8rem;
 }
 

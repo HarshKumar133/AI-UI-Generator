@@ -12,12 +12,11 @@ import { getComponentDescriptions } from '../validation';
 
 const GENERATOR_SYSTEM_PROMPT = `You are the GENERATOR agent in a deterministic UI generation pipeline.
 
-Your job is to convert a structured component plan into valid React/JSX code.
+Your job is to convert a structured component plan into RICH, BEAUTIFUL React/JSX code that looks professional and impressive.
 
 CRITICAL RULES:
 - You MUST import components ONLY from '@/components/ui'
 - You may ONLY use these components: Button, Card, Input, Table, Modal, Sidebar, Navbar, Chart
-- NO inline styles (style={{...}}) are allowed
 - NO custom CSS classes
 - NO external library imports
 - NO new component definitions
@@ -28,32 +27,61 @@ CRITICAL RULES:
 
 ${getComponentDescriptions()}
 
-OUTPUT FORMAT:
-Return ONLY valid TSX code. No markdown, no code fences, no explanations.
-The code must start with import statements and end with the export.
+QUALITY RULES (VERY IMPORTANT):
+- ALWAYS use ALL available props for each component — don't leave any prop empty
+- Button: ALWAYS set variant ("primary", "secondary", "ghost", "danger") and use emoji in labels
+- Card: ALWAYS set title (with emoji) AND subtitle. Nest components inside Cards.
+- Input: ALWAYS set label (with emoji) AND placeholder
+- Table: ALWAYS use 3-5 columns and 4-6 rows of REALISTIC data. Set striped to true.
+- Chart: ALWAYS use 5-7 data points with meaningful labels. Set a title and height.
+- Sidebar: Use groups prop with 2-3 groups, each with 3-4 items with emoji icons
+- Navbar: Set brand with emoji AND 3-5 links AND action buttons
+- Modal: Set title with emoji, size, and nest Input/Button inside as form content
+- Use realistic example data: real names, real dollar amounts, real percentages, real dates
 
-EXAMPLE OUTPUT:
+LAYOUT STYLING:
+For layout purposes ONLY, you may use div wrappers with these layout styles:
+- display: flex/grid
+- flexDirection, alignItems, justifyContent
+- gap (use 16px-24px for good spacing)
+- padding (use 24px-32px for breathing room)
+- margin, width, height, maxWidth, minHeight
+- gridTemplateColumns (e.g. "repeat(auto-fit, minmax(300px, 1fr))" for responsive grids)
+- borderRadius: '12px' on wrapper divs for modern look
+These layout div styles are the ONLY exception. Component styling is handled internally.
+
+EXAMPLE HIGH-QUALITY OUTPUT:
 import React from 'react';
-import { Button, Card, Input } from '@/components/ui';
+import { Button, Card, Input, Table, Chart, Navbar } from '@/components/ui';
 
 export default function GeneratedUI() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '24px' }}>
-      <Card title="Welcome">
-        <Input label="Name" placeholder="Enter your name" />
-        <Button variant="primary">Submit</Button>
-      </Card>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <Navbar brand="🚀 SalesHub" items={[{label:'Dashboard',href:'#'},{label:'Analytics',href:'#'},{label:'Customers',href:'#'},{label:'Settings',href:'#'}]} actions={[{label:'✨ New Report',variant:'primary'}]} />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', padding: '24px' }}>
+        <Card title="📊 Revenue Overview" subtitle="Monthly performance tracking">
+          <Chart type="bar" title="Monthly Revenue" data={[{label:'Jan',value:42000},{label:'Feb',value:38000},{label:'Mar',value:55000},{label:'Apr',value:47000},{label:'May',value:61000},{label:'Jun',value:58000}]} height={250} />
+        </Card>
+        <Card title="👥 Recent Customers" subtitle="Latest sign-ups this week">
+          <Table columns={[{key:'name',header:'Name'},{key:'email',header:'Email'},{key:'plan',header:'Plan'},{key:'revenue',header:'Revenue'}]} data={[{name:'Sarah Chen',email:'sarah@acme.co',plan:'Enterprise',revenue:'$12,400'},{name:'James Wilson',email:'james@startup.io',plan:'Pro',revenue:'$4,200'},{name:'Maria Garcia',email:'maria@corp.com',plan:'Enterprise',revenue:'$8,900'},{name:'Alex Kim',email:'alex@tech.dev',plan:'Starter',revenue:'$1,200'}]} striped={true} />
+        </Card>
+        <Card title="📝 Quick Actions" subtitle="Frequently used tools">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <Input label="🔍 Search Customers" placeholder="Enter name or email..." type="search" />
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <Button variant="primary">✨ Generate Report</Button>
+              <Button variant="secondary">📤 Export Data</Button>
+            </div>
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }
 
-IMPORTANT: For layout purposes ONLY, you may use basic div wrappers with these specific layout styles:
-- display: flex/grid
-- flexDirection, alignItems, justifyContent
-- gap, padding, margin
-- width, height, maxWidth
-- gridTemplateColumns
-These layout div styles are the ONLY exception. Component styling is handled internally by CSS Modules.`;
+OUTPUT FORMAT:
+Return ONLY valid TSX code. No markdown, no code fences, no explanations.
+The code must start with import statements and end with the export.`;
 
 // ---- GENERATOR FUNCTION ----
 

@@ -55,12 +55,23 @@ function renderNode(node: ComponentNode | string, index: number): React.ReactNod
         ? node.children.map((child, i) => renderNode(child, i))
         : undefined;
 
-    // Normalize props — ensure it's a plain object
-    const props = { ...(node.props && typeof node.props === 'object' ? node.props : {}) };
+    // Normalize and sanitize props
+    const rawProps = { ...(node.props && typeof node.props === 'object' ? node.props : {}) };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const props: Record<string, any> = {};
 
-    // Special handling for Modal — always show in preview
+    Object.entries(rawProps).forEach(([key, value]) => {
+        // Fix string event handlers (e.g. onClick: "handleClick") -> safe function
+        if (key.startsWith('on') && typeof value !== 'function') {
+            props[key] = () => console.log(`[Preview] Triggered ${key}`);
+        } else {
+            props[key] = value;
+        }
+    });
+
+    // Special handling for Modal — force CLOSED so it doesn't obscure the dashboard
     if (node.type === 'Modal') {
-        props.isOpen = true;
+        props.isOpen = false;
         props.onClose = () => { };
     }
 
