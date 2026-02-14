@@ -37,30 +37,46 @@ function renderNode(node: ComponentNode | string, index: number): React.ReactNod
         return node;
     }
 
+    if (!node || typeof node !== 'object' || !node.type) {
+        return null;
+    }
+
     const Component = COMPONENT_MAP[node.type];
     if (!Component) {
         return (
             <div key={index} style={{ color: '#f87171', padding: '8px', fontSize: '0.8rem' }}>
-                ⚠️ Unknown component: {node.type}
+                ⚠️ Unknown component: {String(node.type)}
             </div>
         );
     }
 
-    // Process children
-    const children = node.children?.map((child, i) => renderNode(child, i));
+    // Process children safely
+    const children = Array.isArray(node.children)
+        ? node.children.map((child, i) => renderNode(child, i))
+        : undefined;
+
+    // Normalize props — ensure it's a plain object
+    const props = { ...(node.props && typeof node.props === 'object' ? node.props : {}) };
 
     // Special handling for Modal — always show in preview
-    const props = { ...node.props };
     if (node.type === 'Modal') {
         props.isOpen = true;
         props.onClose = () => { };
     }
 
-    return (
-        <Component key={index} {...props}>
-            {children}
-        </Component>
-    );
+    try {
+        return (
+            <Component key={index} {...props}>
+                {children}
+            </Component>
+        );
+    } catch {
+        return (
+            <div key={index} style={{ color: '#f87171', padding: '8px', fontSize: '0.8rem' }}>
+                ⚠️ Error rendering: {node.type}
+            </div>
+        );
+    }
 }
 
 // Get layout styles based on layout type
