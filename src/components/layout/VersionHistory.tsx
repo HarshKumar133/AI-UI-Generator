@@ -3,6 +3,11 @@
 import React from 'react';
 import styles from '@/styles/components/versionHistory.module.css';
 import { VersionEntry } from '@/types';
+import {
+  History,
+  X,
+  Undo2,
+} from 'lucide-react';
 
 interface VersionHistoryProps {
   isOpen: boolean;
@@ -37,8 +42,13 @@ export const VersionHistory: React.FC<VersionHistoryProps> = ({
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.panel} onClick={(e) => e.stopPropagation()}>
         <div className={styles.header}>
-          <h2 className={styles.title}>📋 Version History</h2>
-          <button className={styles.closeButton} onClick={onClose}>✕</button>
+          <h2 className={styles.title}>
+            <History size={18} />
+            Version History
+          </h2>
+          <button className={styles.closeButton} onClick={onClose}>
+            <X size={16} />
+          </button>
         </div>
 
         <div className={styles.body}>
@@ -83,7 +93,8 @@ export const VersionHistory: React.FC<VersionHistoryProps> = ({
                           onRollback(version.version);
                         }}
                       >
-                        ⏪ Restore
+                        <Undo2 size={13} />
+                        Restore
                       </button>
                     )}
                     {isActive && (

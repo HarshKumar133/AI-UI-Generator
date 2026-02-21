@@ -3,6 +3,22 @@
 import React, { useState, useRef, useEffect } from 'react';
 import styles from '@/styles/components/chatPanel.module.css';
 import { ChatMessage, GenerationResult } from '@/types';
+import {
+  MessageSquare,
+  Sparkles,
+  Pencil,
+  BarChart3,
+  ShoppingCart,
+  ClipboardList,
+  Briefcase,
+  TrendingUp,
+  Target,
+  Bot,
+  Brain,
+  ArrowRight,
+  Send,
+  ChevronRight,
+} from 'lucide-react';
 
 interface ChatPanelProps {
   messages: ChatMessage[];
@@ -52,12 +68,12 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   };
 
   const suggestions = [
-    { emoji: '📊', label: 'Analytics Dashboard', color: 'emerald' },
-    { emoji: '🛒', label: 'E-Commerce Admin', color: 'blue' },
-    { emoji: '📋', label: 'Project Manager', color: 'purple' },
-    { emoji: '💼', label: 'CRM Interface', color: 'amber' },
-    { emoji: '📈', label: 'Finance Tracker', color: 'rose' },
-    { emoji: '🎯', label: 'Task Board', color: 'cyan' },
+    { icon: BarChart3, label: 'Analytics Dashboard', color: 'emerald' },
+    { icon: ShoppingCart, label: 'E-Commerce Admin', color: 'blue' },
+    { icon: ClipboardList, label: 'Project Manager', color: 'purple' },
+    { icon: Briefcase, label: 'CRM Interface', color: 'amber' },
+    { icon: TrendingUp, label: 'Finance Tracker', color: 'rose' },
+    { icon: Target, label: 'Task Board', color: 'cyan' },
   ];
 
   return (
@@ -65,11 +81,15 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.headerTitle}>
-          <span className={styles.headerIcon}>💬</span>
+          <MessageSquare size={16} className={styles.headerIcon} />
           AI Chat
         </div>
         <span className={`${styles.headerBadge} ${hasCode ? styles.headerBadgeModify : ''}`}>
-          {hasCode ? '✏️ Modify' : '✨ Generate'}
+          {hasCode ? (
+            <><Pencil size={11} /> Modify</>
+          ) : (
+            <><Sparkles size={11} /> Generate</>
+          )}
         </span>
       </div>
 
@@ -80,9 +100,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             {/* Hero Section */}
             <div className={styles.heroGlow} />
             <div className={styles.emptyIcon}>
-              <span className={styles.sparkle1}>✦</span>
-              <span className={styles.sparkle2}>✦</span>
-              <span className={styles.mainSparkle}>✨</span>
+              <Sparkles size={42} className={styles.mainSparkle} />
             </div>
             <div className={styles.emptyTitle}>What do you want to build?</div>
             <div className={styles.emptyHint}>
@@ -98,21 +116,24 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
             {/* Suggestion Grid — 2 columns */}
             <div className={styles.suggestions}>
-              {suggestions.map((s) => (
-                <button
-                  key={s.label}
-                  className={`${styles.suggestionChip} ${styles[`chip_${s.color}`] || ''}`}
-                  onClick={() => {
-                    setInput(s.label);
-                    onSendMessage(s.label);
-                  }}
-                  disabled={isLoading}
-                >
-                  <span className={styles.chipEmoji}>{s.emoji}</span>
-                  {s.label}
-                  <span className={styles.chipArrow}>→</span>
-                </button>
-              ))}
+              {suggestions.map((s) => {
+                const Icon = s.icon;
+                return (
+                  <button
+                    key={s.label}
+                    className={`${styles.suggestionChip} ${styles[`chip_${s.color}`] || ''}`}
+                    onClick={() => {
+                      setInput(s.label);
+                      onSendMessage(s.label);
+                    }}
+                    disabled={isLoading}
+                  >
+                    <Icon size={15} className={styles.chipIcon} />
+                    <span className={styles.chipLabel}>{s.label}</span>
+                    <ChevronRight size={14} className={styles.chipArrow} />
+                  </button>
+                );
+              })}
             </div>
           </div>
         ) : (
@@ -123,7 +144,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                 className={`${styles.message} ${msg.role === 'user' ? styles.messageUser : styles.messageAssistant}`}
               >
                 {msg.role === 'assistant' && (
-                  <div className={styles.messageAvatar}>🤖</div>
+                  <div className={styles.messageAvatar}>
+                    <Bot size={16} />
+                  </div>
                 )}
                 <div className={styles.messageBubble}>
                   {msg.content}
@@ -132,7 +155,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                 {msg.role === 'assistant' && msg.generationResult?.explanation && (
                   <div className={styles.explanation}>
                     <div className={styles.explanationTitle}>
-                      <span className={styles.reasoningIcon}>🧠</span>
+                      <Brain size={13} className={styles.reasoningIcon} />
                       AI REASONING
                     </div>
                     <div className={styles.explanationText}>
@@ -154,7 +177,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         {/* Loading indicator — animated shimmer */}
         {isLoading && (
           <div className={`${styles.message} ${styles.messageAssistant}`}>
-            <div className={styles.messageAvatar}>🤖</div>
+            <div className={styles.messageAvatar}>
+              <Bot size={16} />
+            </div>
             <div className={styles.loadingBubble}>
               <div className={styles.loadingShimmer} />
               <div className={styles.loadingText}>
@@ -208,10 +233,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               id="send-button"
               aria-label="Send message"
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="5" y1="12" x2="19" y2="12" />
-                <polyline points="12 5 19 12 12 19" />
-              </svg>
+              <Send size={16} />
             </button>
           </div>
         </div>

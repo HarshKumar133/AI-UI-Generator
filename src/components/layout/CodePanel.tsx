@@ -5,6 +5,11 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import styles from '@/styles/components/codePanel.module.css';
 import { ComponentType } from '@/types';
+import {
+  FileCode2,
+  Copy,
+  Check,
+} from 'lucide-react';
 
 interface CodePanelProps {
   code: string;
@@ -42,7 +47,8 @@ export const CodePanel: React.FC<CodePanelProps> = ({
       <div className={styles.codePanel}>
         <div className={styles.header}>
           <div className={styles.headerLeft}>
-            <span className={styles.headerTitle}>📝 Code</span>
+            <FileCode2 size={15} className={styles.headerIconSvg} />
+            <span className={styles.headerTitle}>Code</span>
             <span className={styles.fileName}>GeneratedUI.tsx</span>
           </div>
         </div>
@@ -106,7 +112,8 @@ export const CodePanel: React.FC<CodePanelProps> = ({
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.headerLeft}>
-          <span className={styles.headerTitle}>📝 Code</span>
+          <FileCode2 size={15} className={styles.headerIconSvg} />
+          <span className={styles.headerTitle}>Code</span>
           <span className={styles.fileName}>GeneratedUI.tsx</span>
         </div>
         <div className={styles.headerActions}>
@@ -115,7 +122,11 @@ export const CodePanel: React.FC<CodePanelProps> = ({
             onClick={handleCopy}
             id="copy-code-button"
           >
-            {copied ? '✓ Copied!' : '📋 Copy'}
+            {copied ? (
+              <><Check size={13} /> Copied!</>
+            ) : (
+              <><Copy size={13} /> Copy</>
+            )}
           </button>
         </div>
       </div>

@@ -32,6 +32,11 @@
   letter-spacing: -0.01em;
 }
 
+.headerIconSvg {
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
 .statusDot {
   width: 7px;
   height: 7px;
@@ -227,6 +232,11 @@
 
 .errorIcon {
   font-size: 2rem;
+}
+
+.errorIconSvg {
+  color: var(--color-error);
+  opacity: 0.8;
 }
 
 .errorTitle {

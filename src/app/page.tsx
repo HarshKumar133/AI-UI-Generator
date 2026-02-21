@@ -7,6 +7,15 @@ import { CodePanel } from '@/components/layout/CodePanel';
 import { VersionHistory } from '@/components/layout/VersionHistory';
 import { PreviewPanel } from '@/components/preview/PreviewPanel';
 import { ChatMessage, GenerationResult, ComponentNode, ComponentType, VersionEntry } from '@/types';
+import {
+  Sparkles,
+  PanelLeft,
+  Code2,
+  Eye,
+  Clock,
+  RotateCcw,
+  Trash2,
+} from 'lucide-react';
 
 type ViewTab = 'split' | 'code' | 'preview';
 
@@ -103,7 +112,7 @@ export default function Home() {
         const errorMsg: ChatMessage = {
           id: `error-${Date.now()}`,
           role: 'assistant',
-          content: `❌ Error: ${data.error || 'Generation failed. Please try again.'}`,
+          content: `Error: ${data.error || 'Generation failed. Please try again.'}`,
           timestamp: new Date().toISOString(),
         };
         setMessages(prev => [...prev, errorMsg]);
@@ -112,14 +121,14 @@ export default function Home() {
       const errorMsg: ChatMessage = {
         id: `error-${Date.now()}`,
         role: 'assistant',
-        content: `❌ Network error: ${error instanceof Error ? error.message : 'Failed to connect to server.'}`,
+        content: `Network error: ${error instanceof Error ? error.message : 'Failed to connect to server.'}`,
         timestamp: new Date().toISOString(),
       };
       setMessages(prev => [...prev, errorMsg]);
     } finally {
       setIsLoading(false);
     }
-  }, [currentCode, currentVersion, applyGenerationResult]);
+  }, [currentCode, currentVersion, applyGenerationResult, previewLayout, componentList]);
 
   // Rollback handler
   const handleRollback = useCallback(async (targetVersion: number) => {
@@ -136,7 +145,7 @@ export default function Home() {
     const rollbackMsg: ChatMessage = {
       id: `system-${Date.now()}`,
       role: 'assistant',
-      content: `⏪ Rolled back to version ${targetVersion}. Original prompt: "${version.prompt}"`,
+      content: `Rolled back to version ${targetVersion}. Original prompt: "${version.prompt}"`,
       timestamp: new Date().toISOString(),
     };
     setMessages(prev => [...prev, rollbackMsg]);
@@ -172,7 +181,7 @@ export default function Home() {
       {/* Top Bar */}
       <div className={styles.topBar}>
         <div className={styles.topBarBrand}>
-          <span className={styles.topBarIcon}>✨</span>
+          <Sparkles size={18} className={styles.topBarIcon} />
           Deterministic UI Generator
           <span className={styles.topBarBrandSub}>by Harsh Kumar</span>
         </div>
@@ -186,7 +195,8 @@ export default function Home() {
               onClick={() => setShowVersionHistory(true)}
               id="history-button"
             >
-              📋 History ({versions.length})
+              <Clock size={13} />
+              History ({versions.length})
             </button>
           )}
           {versions.length > 1 && (
@@ -196,7 +206,7 @@ export default function Home() {
               value=""
               id="version-select"
             >
-              <option value="" disabled>⏪ Rollback</option>
+              <option value="" disabled>Rollback</option>
               {versions.map((v, idx) => (
                 <option key={`opt-${idx}-${v.version}`} value={v.version}>
                   v{v.version} — {v.prompt.slice(0, 30)}...
@@ -211,7 +221,8 @@ export default function Home() {
               disabled={isLoading}
               id="regenerate-button"
             >
-              🔄 Regenerate
+              <RotateCcw size={13} />
+              Regenerate
             </button>
           )}
           <button
@@ -219,7 +230,8 @@ export default function Home() {
             onClick={handleClear}
             id="clear-button"
           >
-            🗑 Clear
+            <Trash2 size={13} />
+            Clear
           </button>
         </div>
       </div>
@@ -245,21 +257,24 @@ export default function Home() {
               onClick={() => setActiveTab('split')}
               id="tab-split"
             >
-              ◧ Split View
+              <PanelLeft size={14} />
+              Split View
             </button>
             <button
               className={`${styles.tab} ${activeTab === 'code' ? styles.tabActive : ''}`}
               onClick={() => setActiveTab('code')}
               id="tab-code"
             >
-              📝 Code
+              <Code2 size={14} />
+              Code
             </button>
             <button
               className={`${styles.tab} ${activeTab === 'preview' ? styles.tabActive : ''}`}
               onClick={() => setActiveTab('preview')}
               id="tab-preview"
             >
-              👁️ Preview
+              <Eye size={14} />
+              Preview
             </button>
           </div>
 

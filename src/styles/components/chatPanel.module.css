@@ -31,10 +31,14 @@
 }
 
 .headerIcon {
-  font-size: 1rem;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
 }
 
 .headerBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-size: 0.63rem;
   padding: 4px 12px;
   border-radius: var(--radius-full);
@@ -43,6 +47,10 @@
   font-weight: 600;
   border: 1px solid rgba(16, 185, 129, 0.1);
   letter-spacing: 0.02em;
+}
+
+.headerBadge svg {
+  flex-shrink: 0;
 }
 
 .headerBadgeModify {
@@ -109,7 +117,7 @@
 }
 
 .mainSparkle {
-  font-size: 2.6rem;
+  color: var(--color-accent-tertiary);
   filter: drop-shadow(0 0 20px rgba(16, 185, 129, 0.3));
   animation: float 3.5s ease-in-out infinite;
 }
@@ -224,9 +232,14 @@
   overflow: hidden;
 }
 
-.chipEmoji {
-  font-size: 0.9rem;
+.chipIcon {
   flex-shrink: 0;
+  opacity: 0.6;
+}
+
+.chipLabel {
+  flex: 1;
+  min-width: 0;
 }
 
 .chipArrow {
@@ -330,8 +343,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.85rem;
   margin-bottom: 2px;
+  color: var(--color-accent-primary);
 }
 
 .messageBubble {
@@ -393,7 +406,8 @@
 }
 
 .reasoningIcon {
-  font-size: 0.75rem;
+  flex-shrink: 0;
+  color: var(--color-accent-primary);
 }
 
 .explanationText {

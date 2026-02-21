@@ -5,6 +5,10 @@ import styles from '@/styles/components/previewPanel.module.css';
 import { ComponentRenderer } from './ComponentRenderer';
 import { ComponentNode } from '@/types';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import {
+    Eye,
+    AlertTriangle,
+} from 'lucide-react';
 
 interface PreviewPanelProps {
     components: ComponentNode[];
@@ -26,12 +30,13 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({
             <div className={styles.previewPanel}>
                 <div className={styles.header}>
                     <div className={styles.headerLeft}>
-                        <span className={styles.headerTitle}>👁️ Preview</span>
+                        <Eye size={15} className={styles.headerIconSvg} />
+                        <span className={styles.headerTitle}>Preview</span>
                         <div className={`${styles.statusDot} ${styles.statusDotError}`} />
                     </div>
                 </div>
                 <div className={styles.errorState}>
-                    <div className={styles.errorIcon}>⚠️</div>
+                    <AlertTriangle size={32} className={styles.errorIconSvg} />
                     <div className={styles.errorTitle}>Preview Error</div>
                     <div className={styles.errorMessage}>{error}</div>
                 </div>
@@ -44,7 +49,8 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({
             <div className={styles.previewPanel}>
                 <div className={styles.header}>
                     <div className={styles.headerLeft}>
-                        <span className={styles.headerTitle}>👁️ Preview</span>
+                        <Eye size={15} className={styles.headerIconSvg} />
+                        <span className={styles.headerTitle}>Preview</span>
                         <div className={`${styles.statusDot} ${styles.statusDotIdle}`} />
                     </div>
                 </div>
@@ -87,7 +93,8 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({
             {/* Header */}
             <div className={styles.header}>
                 <div className={styles.headerLeft}>
-                    <span className={styles.headerTitle}>👁️ Preview</span>
+                    <Eye size={15} className={styles.headerIconSvg} />
+                    <span className={styles.headerTitle}>Preview</span>
                     <div className={styles.statusDot} />
                 </div>
                 <div className={styles.headerActions}>
