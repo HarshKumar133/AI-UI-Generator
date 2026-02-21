@@ -1,35 +1,54 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;450;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;450;500;600;700;800;900&display=swap');
 
 :root {
-  /* Color System */
-  --color-bg-primary: #080810;
-  --color-bg-secondary: #0f0f1a;
-  --color-bg-tertiary: #171728;
-  --color-bg-elevated: #1e1e34;
-  --color-bg-hover: #252540;
+  /* ---- Color System: Emerald Dark Premium ---- */
+  --color-bg-primary: #09090b;
+  --color-bg-secondary: #0c0e12;
+  --color-bg-tertiary: #12161c;
+  --color-bg-elevated: #181d25;
+  --color-bg-hover: #1e2530;
+  --color-bg-glass: rgba(12, 14, 18, 0.80);
+  --color-bg-glass-light: rgba(255, 255, 255, 0.03);
+  --color-bg-glass-medium: rgba(255, 255, 255, 0.05);
+  --color-bg-card: rgba(18, 22, 28, 0.65);
+  --color-bg-card-hover: rgba(24, 29, 37, 0.8);
 
-  --color-text-primary: #ededf5;
-  --color-text-secondary: #a8a8c0;
-  --color-text-muted: #606078;
-  --color-text-accent: #8b7ff8;
+  /* Text */
+  --color-text-primary: #f0f2f5;
+  --color-text-secondary: #8b96a5;
+  --color-text-muted: #4a5568;
+  --color-text-accent: #34d399;
 
-  --color-accent-primary: #8b7ff8;
-  --color-accent-secondary: #6c5ce7;
-  --color-accent-tertiary: #a78bfa;
-  --color-accent-glow: rgba(139, 127, 248, 0.12);
-  --color-accent-glow-strong: rgba(139, 127, 248, 0.25);
+  /* Accent: Emerald / Teal */
+  --color-accent-primary: #10b981;
+  --color-accent-secondary: #059669;
+  --color-accent-tertiary: #34d399;
+  --color-accent-bright: #6ee7b7;
+  --color-accent-glow: rgba(16, 185, 129, 0.08);
+  --color-accent-glow-strong: rgba(16, 185, 129, 0.18);
+  --color-accent-surface: rgba(16, 185, 129, 0.06);
+  --color-accent-gradient: linear-gradient(135deg, #10b981 0%, #059669 50%, #0d9488 100%);
+  --color-accent-gradient-soft: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(5, 150, 105, 0.06) 100%);
 
-  --color-success: #34d399;
-  --color-success-glow: rgba(52, 211, 153, 0.12);
-  --color-warning: #fbbf24;
-  --color-warning-glow: rgba(251, 191, 36, 0.12);
-  --color-error: #f87171;
-  --color-error-glow: rgba(248, 113, 113, 0.12);
-  --color-info: #60a5fa;
-  --color-info-glow: rgba(96, 165, 250, 0.12);
+  /* Secondary Accent: Blue */
+  --color-blue: #3b82f6;
+  --color-blue-glow: rgba(59, 130, 246, 0.10);
 
+  /* Status */
+  --color-success: #22c55e;
+  --color-success-glow: rgba(34, 197, 94, 0.10);
+  --color-warning: #f59e0b;
+  --color-warning-glow: rgba(245, 158, 11, 0.10);
+  --color-error: #ef4444;
+  --color-error-glow: rgba(239, 68, 68, 0.10);
+  --color-info: #3b82f6;
+  --color-info-glow: rgba(59, 130, 246, 0.10);
+
+  /* Borders */
   --color-border: rgba(255, 255, 255, 0.06);
-  --color-border-hover: rgba(255, 255, 255, 0.12);
+  --color-border-hover: rgba(255, 255, 255, 0.10);
+  --color-border-focus: rgba(16, 185, 129, 0.30);
+  --color-border-subtle: rgba(255, 255, 255, 0.03);
 
   /* Typography */
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -42,27 +61,34 @@
   --space-lg: 24px;
   --space-xl: 32px;
   --space-2xl: 48px;
+  --space-3xl: 64px;
 
-  /* Border Radius */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
+  /* Border Radius — large & round like Base44 */
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius-2xl: 36px;
   --radius-full: 9999px;
 
   /* Shadows */
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
-  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.6);
-  --shadow-glow: 0 0 24px var(--color-accent-glow);
-  --shadow-glow-strong: 0 0 40px var(--color-accent-glow-strong);
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.15);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.20);
+  --shadow-md: 0 4px 24px rgba(0, 0, 0, 0.25);
+  --shadow-lg: 0 12px 48px rgba(0, 0, 0, 0.35);
+  --shadow-xl: 0 24px 64px rgba(0, 0, 0, 0.45);
+  --shadow-glow: 0 0 40px rgba(16, 185, 129, 0.06);
+  --shadow-glow-strong: 0 0 60px rgba(16, 185, 129, 0.14);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  --shadow-card-hover: 0 8px 32px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --shadow-input-focus: 0 0 0 3px rgba(16, 185, 129, 0.08), 0 0 20px rgba(16, 185, 129, 0.04);
 
   /* Transitions */
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-spring: 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  --transition-spring: 350ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 * {
@@ -79,34 +105,33 @@ body {
   color: var(--color-text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
 }
 
-/* Scrollbar Styling */
+/* Thin scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-bg-secondary);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-border);
+  background: rgba(255, 255, 255, 0.06);
   border-radius: var(--radius-full);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-border-hover);
+  background: rgba(255, 255, 255, 0.12);
 }
 
-/* Selection */
 ::selection {
-  background: var(--color-accent-primary);
+  background: rgba(16, 185, 129, 0.3);
   color: white;
 }
 
-/* Links */
 a {
   color: var(--color-accent-primary);
   text-decoration: none;
@@ -114,19 +139,24 @@ a {
 }
 
 a:hover {
-  color: var(--color-accent-secondary);
+  color: var(--color-accent-tertiary);
 }
 
-/* Code */
 code {
   font-family: var(--font-mono);
-  font-size: 0.9em;
-  background: var(--color-bg-tertiary);
-  padding: 2px 6px;
+  font-size: 0.85em;
+  background: var(--color-accent-surface);
+  color: var(--color-accent-tertiary);
+  padding: 2px 7px;
   border-radius: var(--radius-sm);
 }
 
-/* Utility */
+/* Utility: focus ring */
+.focus-ring:focus-visible {
+  outline: 2px solid var(--color-accent-primary);
+  outline-offset: 2px;
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;

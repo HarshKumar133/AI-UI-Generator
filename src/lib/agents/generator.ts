@@ -39,6 +39,16 @@ QUALITY RULES (VERY IMPORTANT):
 - Modal: Set title with emoji, size, and nest Input/Button inside as form content
 - Use realistic example data: real names, real dollar amounts, real percentages, real dates
 
+CRITICAL — DO NOT DO THESE:
+- Do NOT use raw HTML tags like <h1>, <h2>, <h3>, <p>, <span>, <br>, <hr> inside component children
+- Do NOT write <h1>$1,234,567</h1> — instead use a div with style={{ fontSize: '2rem', fontWeight: 700 }}
+- Do NOT write <p>Some text</p> — instead use a div with appropriate fontSize style
+- For displaying large numbers/KPIs inside Cards, use div wrappers with fontSize and fontWeight styles
+- For stat values, use: <div style={{ fontSize: '2.2rem', fontWeight: 800, letterSpacing: '-0.03em' }}>$1,234,567</div>
+- For stat labels, use: <div style={{ fontSize: '0.85rem', color: '#8b99a6' }}>+12.5% vs last month</div>
+- Create visually rich KPI cards by composing styled divs with large numbers + trend indicators
+- Use flex layout divs to create professional stat grids inside Cards
+
 LAYOUT STYLING:
 For layout purposes ONLY, you may use div wrappers with these layout styles:
 - display: flex/grid
@@ -59,20 +69,21 @@ export default function GeneratedUI() {
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Navbar brand="🚀 SalesHub" items={[{label:'Dashboard',href:'#'},{label:'Analytics',href:'#'},{label:'Customers',href:'#'},{label:'Settings',href:'#'}]} actions={[{label:'✨ New Report',variant:'primary'}]} />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', padding: '24px' }}>
+        <Card title="💰 Total Revenue" subtitle="Performance over the last 30 days">
+          <div style={{ fontSize: '2.4rem', fontWeight: 800, letterSpacing: '-0.03em', color: '#eceff2' }}>$1,234,567</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px' }}>
+            <div style={{ fontSize: '0.85rem', color: '#10b981', fontWeight: 600 }}>📈 +12.5%</div>
+            <div style={{ fontSize: '0.8rem', color: '#8b99a6' }}>vs. previous month</div>
+          </div>
+          <div style={{ marginTop: '16px' }}>
+            <Button variant="primary" size="sm">📊 View Details</Button>
+          </div>
+        </Card>
         <Card title="📊 Revenue Overview" subtitle="Monthly performance tracking">
           <Chart type="bar" title="Monthly Revenue" data={[{label:'Jan',value:42000},{label:'Feb',value:38000},{label:'Mar',value:55000},{label:'Apr',value:47000},{label:'May',value:61000},{label:'Jun',value:58000}]} height={250} />
         </Card>
         <Card title="👥 Recent Customers" subtitle="Latest sign-ups this week">
           <Table columns={[{key:'name',header:'Name'},{key:'email',header:'Email'},{key:'plan',header:'Plan'},{key:'revenue',header:'Revenue'}]} data={[{name:'Sarah Chen',email:'sarah@acme.co',plan:'Enterprise',revenue:'$12,400'},{name:'James Wilson',email:'james@startup.io',plan:'Pro',revenue:'$4,200'},{name:'Maria Garcia',email:'maria@corp.com',plan:'Enterprise',revenue:'$8,900'},{name:'Alex Kim',email:'alex@tech.dev',plan:'Starter',revenue:'$1,200'}]} striped={true} />
-        </Card>
-        <Card title="📝 Quick Actions" subtitle="Frequently used tools">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <Input label="🔍 Search Customers" placeholder="Enter name or email..." type="search" />
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <Button variant="primary">✨ Generate Report</Button>
-              <Button variant="secondary">📤 Export Data</Button>
-            </div>
-          </div>
         </Card>
       </div>
     </div>
@@ -86,7 +97,7 @@ The code must start with import statements and end with the export.`;
 // ---- GENERATOR FUNCTION ----
 
 export async function runGenerator(plan: PlannerOutput): Promise<GeneratorOutput> {
-    const userMessage = `Convert this component plan into a React component:
+  const userMessage = `Convert this component plan into a React component:
 
 PLAN:
 ${JSON.stringify(plan, null, 2)}
@@ -104,84 +115,84 @@ ${getLayoutGuidance(plan.layout)}
 
 Return ONLY the TSX code, nothing else.`;
 
-    const response = await callGemini(userMessage, GENERATOR_SYSTEM_PROMPT);
+  const response = await callGemini(userMessage, GENERATOR_SYSTEM_PROMPT);
 
-    // Clean the response
-    let code = response.trim();
+  // Clean the response
+  let code = response.trim();
 
-    // Remove markdown code fences if present
-    if (code.startsWith('`')) {
-        code = code.replace(/^`{3}(?:tsx?|jsx?|typescript|javascript)?\s*\n?/, '').replace(/\n?`{3}\s*$/, '');
+  // Remove markdown code fences if present
+  if (code.startsWith('`')) {
+    code = code.replace(/^`{3}(?:tsx?|jsx?|typescript|javascript)?\s*\n?/, '').replace(/\n?`{3}\s*$/, '');
+  }
+
+  // Ensure the code has the required import
+  if (!code.includes("from '@/components/ui'") && !code.includes('from "@/components/ui"')) {
+    const usedComponents = extractUsedComponents(code);
+    const importLine = `import { ${usedComponents.join(', ')} } from '@/components/ui';\n`;
+    if (!code.startsWith('import React')) {
+      code = `import React from 'react';\n${importLine}\n${code}`;
+    } else {
+      const firstNewline = code.indexOf('\n');
+      code = code.slice(0, firstNewline + 1) + importLine + code.slice(firstNewline + 1);
     }
+  }
 
-    // Ensure the code has the required import
-    if (!code.includes("from '@/components/ui'") && !code.includes('from "@/components/ui"')) {
-        const usedComponents = extractUsedComponents(code);
-        const importLine = `import { ${usedComponents.join(', ')} } from '@/components/ui';\n`;
-        if (!code.startsWith('import React')) {
-            code = `import React from 'react';\n${importLine}\n${code}`;
-        } else {
-            const firstNewline = code.indexOf('\n');
-            code = code.slice(0, firstNewline + 1) + importLine + code.slice(firstNewline + 1);
-        }
-    }
+  // Ensure it has a default export
+  if (!code.includes('export default')) {
+    code = code.replace(
+      /function GeneratedUI/,
+      'export default function GeneratedUI'
+    );
+  }
 
-    // Ensure it has a default export
-    if (!code.includes('export default')) {
-        code = code.replace(
-            /function GeneratedUI/,
-            'export default function GeneratedUI'
-        );
-    }
+  // Extract the list of components used
+  const componentList = extractUsedComponents(code);
 
-    // Extract the list of components used
-    const componentList = extractUsedComponents(code);
-
-    return {
-        code,
-        componentList,
-    };
+  return {
+    code,
+    componentList,
+  };
 }
 
 // ---- HELPER: Provide layout-specific guidance ----
 
 function getLayoutGuidance(layout: string): string {
-    const guides: Record<string, string> = {
-        'single-column': `Use a single vertical column:
+  const guides: Record<string, string> = {
+    'single-column': `Use a single vertical column:
   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '24px', maxWidth: '800px', margin: '0 auto' }}>`,
-        'two-column': `Use a two-column grid:
+    'two-column': `Use a two-column grid:
   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', padding: '24px' }}>`,
-        'sidebar-layout': `Use a sidebar + main content layout:
+    'sidebar-layout': `Use a sidebar + main content layout:
   <div style={{ display: 'flex', height: '100vh' }}>
     <Sidebar ... />
     <main style={{ flex: 1, padding: '24px', overflow: 'auto' }}>`,
-        'dashboard': `Use a dashboard grid layout:
+    'dashboard': `Use a dashboard grid layout:
   <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
     <Navbar ... />
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px', padding: '24px' }}>`,
-        'centered': `Center content in the viewport:
+    'centered': `Center content in the viewport:
   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: '24px' }}>
     <div style={{ maxWidth: '500px', width: '100%' }}>`,
-        'full-width': `Use full width layout:
+    'full-width': `Use full width layout:
   <div style={{ width: '100%', padding: '24px' }}>`,
-    };
+  };
 
-    return guides[layout] || guides['single-column'];
+  return guides[layout] || guides['single-column'];
 }
 
 // ---- HELPER: Extract component names from code ----
 
 function extractUsedComponents(code: string): ComponentType[] {
-    const allowed: ComponentType[] = ['Button', 'Card', 'Input', 'Table', 'Modal', 'Sidebar', 'Navbar', 'Chart'];
-    const used: ComponentType[] = [];
+  const allowed: ComponentType[] = ['Button', 'Card', 'Input', 'Table', 'Modal', 'Sidebar', 'Navbar', 'Chart'];
+  const used: ComponentType[] = [];
 
-    for (const comp of allowed) {
-        // Check if component is used in JSX (e.g., <Button or <Card)
-        const regex = new RegExp(`<${comp}[\\s/>]`, 'g');
-        if (regex.test(code)) {
-            used.push(comp);
-        }
+  for (const comp of allowed) {
+    // Check if component is used in JSX (e.g., <Button or <Card)
+    const regex = new RegExp(`<${comp}[\\s/>]`, 'g');
+    if (regex.test(code)) {
+      used.push(comp);
     }
+  }
 
-    return used;
+  return used;
 }

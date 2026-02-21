@@ -1,3 +1,4 @@
+/* Input — Clean Form Control */
 .inputWrapper {
   display: flex;
   flex-direction: column;
@@ -5,7 +6,7 @@
 }
 
 .label {
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 500;
   color: var(--color-text-secondary);
   letter-spacing: 0.01em;
@@ -13,75 +14,43 @@
 
 .required {
   color: var(--color-error);
-  margin-left: 2px;
-}
-
-.inputContainer {
-  position: relative;
-  display: flex;
-  align-items: center;
+  margin-left: 3px;
 }
 
 .input {
-  width: 100%;
   font-family: var(--font-sans);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   color: var(--color-text-primary);
-  background: rgba(26, 26, 46, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--color-bg-glass-light);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  padding: 11px 16px;
+  padding: 10px 14px;
   outline: none;
   transition: all var(--transition-fast);
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .input:focus {
-  border-color: rgba(124, 110, 240, 0.5);
-  box-shadow: 0 0 0 3px rgba(124, 110, 240, 0.1), inset 0 1px 3px rgba(0, 0, 0, 0.1);
-  background: rgba(26, 26, 46, 0.8);
+  border-color: var(--color-border-active);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.05);
 }
 
 .input::placeholder {
   color: var(--color-text-muted);
-  font-weight: 400;
 }
 
-.input:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.textarea {
-  resize: vertical;
-  min-height: 80px;
-}
-
-.helperText {
-  font-size: 0.78rem;
-  color: var(--color-text-muted);
+.error {
+  border-color: var(--color-error) !important;
 }
 
 .errorText {
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   color: var(--color-error);
 }
 
-.errorInput {
-  border-color: rgba(248, 113, 113, 0.5);
-}
-
-.errorInput:focus {
-  box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.12);
-}
-
-/* Sizes */
-.sm .input {
-  padding: 7px 12px;
-  font-size: 0.8rem;
-}
-
-.lg .input {
-  padding: 14px 18px;
-  font-size: 1rem;
+.select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%234d5b66' fill='none' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
 }

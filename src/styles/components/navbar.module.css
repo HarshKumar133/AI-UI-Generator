@@ -1,88 +1,55 @@
+/* Navbar — Clean Minimal Header */
 .navbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 var(--space-xl);
-  background: linear-gradient(180deg, rgba(18, 18, 26, 0.98), rgba(12, 12, 18, 0.95));
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-  height: 60px;
-  flex-shrink: 0;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+  background: rgba(10, 13, 15, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--color-border);
+  height: 52px;
   position: relative;
-  z-index: 10;
 }
 
-.navbar::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(124, 110, 240, 0.3), transparent);
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
+.navTitle {
+  font-size: 0.95rem;
   font-weight: 700;
-  font-size: 1.05rem;
   color: var(--color-text-primary);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
 }
 
-.brandIcon {
-  font-size: 1.4rem;
-}
-
-.nav {
+.navLinks {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: var(--space-xs);
+  list-style: none;
 }
 
-.link {
-  padding: 8px 16px;
-  border-radius: var(--radius-sm);
-  font-size: 0.85rem;
+.navLink {
+  padding: 6px 14px;
+  font-size: 0.8rem;
   font-weight: 500;
   color: var(--color-text-muted);
   cursor: pointer;
+  border-radius: var(--radius-full);
   transition: all var(--transition-fast);
   border: none;
   background: none;
   font-family: var(--font-sans);
-  text-decoration: none;
-  letter-spacing: 0.01em;
-  position: relative;
 }
 
-.link:hover {
-  background: rgba(255, 255, 255, 0.04);
+.navLink:hover {
   color: var(--color-text-primary);
+  background: var(--color-bg-glass-light);
 }
 
-.linkActive {
+.navLinkActive {
   color: var(--color-accent-primary);
-  background: var(--color-accent-glow);
+  background: var(--color-accent-surface);
 }
 
-.linkActive::after {
-  content: '';
-  position: absolute;
-  bottom: -1px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 60%;
-  height: 2px;
-  background: var(--color-accent-primary);
-  border-radius: 1px;
-}
-
-.actions {
+.navActions {
   display: flex;
   align-items: center;
   gap: var(--space-sm);

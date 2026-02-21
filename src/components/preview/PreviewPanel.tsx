@@ -27,7 +27,7 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({
                 <div className={styles.header}>
                     <div className={styles.headerLeft}>
                         <span className={styles.headerTitle}>👁️ Preview</span>
-                        <div className={`${styles.statusDot} ${styles.statusDotIdle}`} />
+                        <div className={`${styles.statusDot} ${styles.statusDotError}`} />
                     </div>
                 </div>
                 <div className={styles.errorState}>
@@ -49,10 +49,33 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({
                     </div>
                 </div>
                 <div className={styles.emptyState}>
-                    <div className={styles.emptyIcon}>👁️</div>
+                    {/* CSS Wireframe Illustration */}
+                    <div className={styles.wireframe}>
+                        <div className={styles.wireframeNav}>
+                            <div className={styles.wireframeDot} />
+                            <div className={styles.wireframeDot} />
+                            <div className={styles.wireframeDot} />
+                            <div className={styles.wireframeNavBar} />
+                        </div>
+                        <div className={styles.wireframeBody}>
+                            <div className={styles.wireframeSidebar}>
+                                <div className={styles.wireframeLine} />
+                                <div className={styles.wireframeLine} />
+                                <div className={styles.wireframeLine} />
+                                <div className={styles.wirelineShort} />
+                            </div>
+                            <div className={styles.wireframeMain}>
+                                <div className={styles.wireframeCardRow}>
+                                    <div className={styles.wireframeCard} />
+                                    <div className={styles.wireframeCard} />
+                                </div>
+                                <div className={styles.wireframeChart} />
+                            </div>
+                        </div>
+                    </div>
                     <div className={styles.emptyTitle}>Live Preview</div>
                     <div className={styles.emptyHint}>
-                        Your generated UI will be rendered here in real-time using the deterministic component library.
+                        Your generated UI will be rendered here in real-time using the component library.
                     </div>
                 </div>
             </div>

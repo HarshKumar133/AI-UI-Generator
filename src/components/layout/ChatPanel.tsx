@@ -29,8 +29,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   // Auto-resize textarea
   useEffect(() => {
     if (textareaRef.current) {
-      textareaRef.current.style.height = '42px';
-      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 120) + 'px';
+      textareaRef.current.style.height = '44px';
+      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 140) + 'px';
     }
   }, [input]);
 
@@ -51,15 +51,25 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  const suggestions = [
+    { emoji: '📊', label: 'Analytics Dashboard', color: 'emerald' },
+    { emoji: '🛒', label: 'E-Commerce Admin', color: 'blue' },
+    { emoji: '📋', label: 'Project Manager', color: 'purple' },
+    { emoji: '💼', label: 'CRM Interface', color: 'amber' },
+    { emoji: '📈', label: 'Finance Tracker', color: 'rose' },
+    { emoji: '🎯', label: 'Task Board', color: 'cyan' },
+  ];
+
   return (
     <div className={styles.chatPanel}>
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.headerTitle}>
-          💬 AI Chat
+          <span className={styles.headerIcon}>💬</span>
+          AI Chat
         </div>
-        <span className={styles.headerBadge}>
-          {hasCode ? 'Modify Mode' : 'Generate Mode'}
+        <span className={`${styles.headerBadge} ${hasCode ? styles.headerBadgeModify : ''}`}>
+          {hasCode ? '✏️ Modify' : '✨ Generate'}
         </span>
       </div>
 
@@ -67,10 +77,42 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       <div className={styles.messages}>
         {messages.length === 0 && !isLoading ? (
           <div className={styles.emptyState}>
-            <div className={styles.emptyIcon}>✨</div>
-            <div className={styles.emptyTitle}>Describe your UI</div>
+            {/* Hero Section */}
+            <div className={styles.heroGlow} />
+            <div className={styles.emptyIcon}>
+              <span className={styles.sparkle1}>✦</span>
+              <span className={styles.sparkle2}>✦</span>
+              <span className={styles.mainSparkle}>✨</span>
+            </div>
+            <div className={styles.emptyTitle}>What do you want to build?</div>
             <div className={styles.emptyHint}>
-              Tell me what UI you want to build. For example: &quot;Create a dashboard with a sidebar, stats cards, and a bar chart&quot;
+              Describe any UI in natural language — dashboards, forms, admin panels — and watch it come to life.
+            </div>
+
+            {/* Label */}
+            <div className={styles.suggestionsLabel}>
+              <span className={styles.suggestionsLine} />
+              <span>TRY AN EXAMPLE</span>
+              <span className={styles.suggestionsLine} />
+            </div>
+
+            {/* Suggestion Grid — 2 columns */}
+            <div className={styles.suggestions}>
+              {suggestions.map((s) => (
+                <button
+                  key={s.label}
+                  className={`${styles.suggestionChip} ${styles[`chip_${s.color}`] || ''}`}
+                  onClick={() => {
+                    setInput(s.label);
+                    onSendMessage(s.label);
+                  }}
+                  disabled={isLoading}
+                >
+                  <span className={styles.chipEmoji}>{s.emoji}</span>
+                  {s.label}
+                  <span className={styles.chipArrow}>→</span>
+                </button>
+              ))}
             </div>
           </div>
         ) : (
@@ -80,17 +122,23 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                 key={msg.id}
                 className={`${styles.message} ${msg.role === 'user' ? styles.messageUser : styles.messageAssistant}`}
               >
+                {msg.role === 'assistant' && (
+                  <div className={styles.messageAvatar}>🤖</div>
+                )}
                 <div className={styles.messageBubble}>
                   {msg.content}
                 </div>
                 {/* Show explanation for assistant messages with generation results */}
                 {msg.role === 'assistant' && msg.generationResult?.explanation && (
                   <div className={styles.explanation}>
-                    <div className={styles.explanationTitle}>🧠 AI Reasoning</div>
+                    <div className={styles.explanationTitle}>
+                      <span className={styles.reasoningIcon}>🧠</span>
+                      AI REASONING
+                    </div>
                     <div className={styles.explanationText}>
                       {msg.generationResult.explanation.explanation}
                     </div>
-                    <div style={{ marginTop: '8px' }}>
+                    <div className={styles.componentTags}>
                       {msg.generationResult.generation.componentList.map((comp) => (
                         <span key={comp} className={styles.componentTag}>{comp}</span>
                       ))}
@@ -103,14 +151,30 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           </>
         )}
 
-        {/* Loading indicator */}
+        {/* Loading indicator — animated shimmer */}
         {isLoading && (
           <div className={`${styles.message} ${styles.messageAssistant}`}>
-            <div className={styles.messageBubble}>
-              <div className={styles.loadingDots}>
-                <span />
-                <span />
-                <span />
+            <div className={styles.messageAvatar}>🤖</div>
+            <div className={styles.loadingBubble}>
+              <div className={styles.loadingShimmer} />
+              <div className={styles.loadingText}>
+                <span>Generating your UI</span>
+                <span className={styles.loadingDots}>
+                  <span />
+                  <span />
+                  <span />
+                </span>
+              </div>
+              <div className={styles.loadingSteps}>
+                <div className={`${styles.loadingStep} ${styles.loadingStepActive}`}>
+                  <span className={styles.stepDot} /> Planning layout
+                </div>
+                <div className={styles.loadingStep}>
+                  <span className={styles.stepDot} /> Composing components
+                </div>
+                <div className={styles.loadingStep}>
+                  <span className={styles.stepDot} /> Generating code
+                </div>
               </div>
             </div>
           </div>
@@ -119,13 +183,13 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area */}
+      {/* Input Area — Floating Action Bar */}
       <div className={styles.inputArea}>
-        <div className={styles.inputRow}>
+        <div className={styles.inputContainer}>
           <textarea
             ref={textareaRef}
             className={styles.textInput}
-            placeholder={hasCode ? 'Describe modifications...' : 'Describe the UI you want...'}
+            placeholder={hasCode ? 'Describe your modifications...' : 'Build me a...'}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -133,15 +197,23 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             rows={1}
             id="chat-input"
           />
-          <button
-            className={styles.sendButton}
-            onClick={handleSubmit}
-            disabled={!input.trim() || isLoading}
-            id="send-button"
-            aria-label="Send message"
-          >
-            ➤
-          </button>
+          <div className={styles.inputActions}>
+            <span className={styles.keyboardHint}>
+              ⏎ Enter
+            </span>
+            <button
+              className={styles.sendButton}
+              onClick={handleSubmit}
+              disabled={!input.trim() || isLoading}
+              id="send-button"
+              aria-label="Send message"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12 5 19 12 12 19" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
     </div>

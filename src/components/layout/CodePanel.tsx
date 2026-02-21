@@ -24,7 +24,6 @@ export const CodePanel: React.FC<CodePanelProps> = ({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Fallback for older browsers
       const textarea = document.createElement('textarea');
       textarea.value = code;
       document.body.appendChild(textarea);
@@ -48,7 +47,51 @@ export const CodePanel: React.FC<CodePanelProps> = ({
           </div>
         </div>
         <div className={styles.emptyState}>
-          <div className={styles.emptyIcon}>📄</div>
+          {/* Code wireframe illustration */}
+          <div className={styles.codeWireframe}>
+            <div className={styles.codeLine}>
+              <span className={styles.lineNum}>1</span>
+              <span className={styles.codeKeyword} style={{ width: '42px' }} />
+              <span className={styles.codeString} style={{ width: '55px' }} />
+              <span className={styles.codeKeyword} style={{ width: '30px' }} />
+              <span className={styles.codeString} style={{ width: '50px' }} />
+            </div>
+            <div className={styles.codeLine}>
+              <span className={styles.lineNum}>2</span>
+              <span className={styles.codeKeyword} style={{ width: '42px' }} />
+              <span className={styles.codeBlock} style={{ width: '70px' }} />
+              <span className={styles.codeKeyword} style={{ width: '30px' }} />
+              <span className={styles.codeString} style={{ width: '80px' }} />
+            </div>
+            <div className={styles.codeLine}>
+              <span className={styles.lineNum}>3</span>
+            </div>
+            <div className={styles.codeLine}>
+              <span className={styles.lineNum}>4</span>
+              <span className={styles.codeKeyword} style={{ width: '50px' }} />
+              <span className={styles.codeBlock} style={{ width: '25px' }} />
+              <span className={styles.codeKeyword} style={{ width: '60px' }} />
+              <span className={styles.codeBlock} style={{ width: '35px' }} />
+            </div>
+            <div className={styles.codeLine}>
+              <span className={styles.lineNum}>5</span>
+              <span className={styles.codeIndent} />
+              <span className={styles.codeKeyword} style={{ width: '35px' }} />
+              <span className={styles.codeBlock} style={{ width: '15px' }} />
+            </div>
+            <div className={styles.codeLine}>
+              <span className={styles.lineNum}>6</span>
+              <span className={styles.codeIndent} />
+              <span className={styles.codeIndent} />
+              <span className={styles.codeTag} style={{ width: '45px' }} />
+              <span className={styles.codeString} style={{ width: '55px' }} />
+            </div>
+            <div className={styles.codeLine}>
+              <span className={styles.lineNum}>7</span>
+              <span className={styles.codeIndent} />
+              <span className={styles.codeBlock} style={{ width: '30px' }} />
+            </div>
+          </div>
           <div className={styles.emptyTitle}>No code yet</div>
           <div className={styles.emptyHint}>
             Generated code will appear here. Use the chat to describe your UI.
@@ -72,7 +115,7 @@ export const CodePanel: React.FC<CodePanelProps> = ({
             onClick={handleCopy}
             id="copy-code-button"
           >
-            {copied ? '✓ Copied' : '📋 Copy'}
+            {copied ? '✓ Copied!' : '📋 Copy'}
           </button>
         </div>
       </div>

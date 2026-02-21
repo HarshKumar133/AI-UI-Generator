@@ -1,3 +1,4 @@
+/* Preview Panel — Ultra-Modern with Wireframe Illustration */
 .previewPanel {
   display: flex;
   flex-direction: column;
@@ -5,65 +6,57 @@
   background: var(--color-bg-primary);
 }
 
+/* ---- HEADER ---- */
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-sm) var(--space-lg);
+  padding: 0 var(--space-lg);
   border-bottom: 1px solid var(--color-border);
-  background: var(--color-bg-secondary);
+  background: rgba(9, 9, 11, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   flex-shrink: 0;
-  min-height: 48px;
+  height: 42px;
 }
 
 .headerLeft {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
+  gap: 8px;
 }
 
 .headerTitle {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .statusDot {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: var(--color-success);
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
   animation: pulse 2s ease-in-out infinite;
 }
 
 .statusDotIdle {
   background: var(--color-text-muted);
+  box-shadow: none;
   animation: none;
+}
+
+.statusDotError {
+  background: var(--color-error);
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+  animation: pulse 1.5s ease-in-out infinite;
 }
 
 .headerActions {
   display: flex;
   align-items: center;
-  gap: var(--space-xs);
-}
-
-.actionButton {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 5px 10px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-bg-tertiary);
-  color: var(--color-text-secondary);
-  font-size: 0.75rem;
-  font-family: var(--font-sans);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.actionButton:hover {
-  background: var(--color-bg-hover);
-  color: var(--color-text-primary);
+  gap: 6px;
 }
 
 .previewContainer {
@@ -75,38 +68,153 @@
 
 .previewContent {
   min-height: 100%;
-  animation: fadeIn 300ms ease;
+  animation: fadeIn 400ms ease;
 }
 
+/* ---- EMPTY STATE with Wireframe Illustration ---- */
 .emptyState {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--space-md);
+  gap: 20px;
   color: var(--color-text-muted);
-  padding: var(--space-xl);
+  padding: var(--space-2xl);
+  position: relative;
 }
 
-.emptyIcon {
-  font-size: 2.5rem;
-  opacity: 0.4;
+/* CSS Wireframe — Dashboard Mockup */
+.wireframe {
+  width: 200px;
+  height: 130px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.01);
+  margin-bottom: 4px;
+  animation: wireframeFloat 4s ease-in-out infinite;
+  position: relative;
+}
+
+.wireframe::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.02) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+@keyframes wireframeFloat {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.wireframeNav {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 5px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.wireframeDot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.wireframeNavBar {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.04);
+  margin-left: 8px;
+}
+
+.wireframeBody {
+  display: flex;
+  flex: 1;
+  gap: 0;
+  height: calc(100% - 22px);
+}
+
+.wireframeSidebar {
+  width: 40px;
+  border-right: 1px solid rgba(255, 255, 255, 0.03);
+  padding: 8px 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wireframeLine {
+  height: 3px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 2px;
+}
+
+.wirelineShort {
+  height: 3px;
+  width: 60%;
+  background: rgba(16, 185, 129, 0.12);
+  border-radius: 2px;
+}
+
+.wireframeMain {
+  flex: 1;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.wireframeCardRow {
+  display: flex;
+  gap: 5px;
+}
+
+.wireframeCard {
+  flex: 1;
+  height: 28px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.wireframeChart {
+  flex: 1;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.04) 0%, rgba(16, 185, 129, 0.01) 100%);
 }
 
 .emptyTitle {
   font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--color-text-secondary);
+  font-weight: 700;
+  color: var(--color-text-primary);
+  letter-spacing: -0.02em;
 }
 
 .emptyHint {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   text-align: center;
-  max-width: 280px;
-  line-height: 1.5;
+  max-width: 260px;
+  line-height: 1.65;
+  color: var(--color-text-muted);
 }
 
+/* ---- ERROR STATE ---- */
 .errorState {
   flex: 1;
   display: flex;
@@ -132,23 +240,37 @@
   color: var(--color-text-muted);
   text-align: center;
   max-width: 300px;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 .versionBadge {
-  font-size: 0.65rem;
-  padding: 2px 8px;
+  font-size: 0.6rem;
+  padding: 3px 10px;
   border-radius: var(--radius-full);
-  background: var(--color-bg-tertiary);
+  background: var(--color-bg-glass-light);
   color: var(--color-text-muted);
+  font-weight: 500;
+  border: 1px solid var(--color-border);
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.4;
+  }
 }
