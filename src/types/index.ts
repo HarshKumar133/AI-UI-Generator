@@ -11,7 +11,16 @@ export type ComponentType =
   | 'Modal'
   | 'Sidebar'
   | 'Navbar'
-  | 'Chart';
+  | 'Chart'
+  | 'Badge'
+  | 'Avatar'
+  | 'Progress'
+  | 'Stat'
+  | 'Alert'
+  | 'Toggle'
+  | 'Tabs'
+  | 'Divider'
+  | 'Select';
 
 export const ALLOWED_COMPONENTS: ComponentType[] = [
   'Button',
@@ -22,6 +31,15 @@ export const ALLOWED_COMPONENTS: ComponentType[] = [
   'Sidebar',
   'Navbar',
   'Chart',
+  'Badge',
+  'Avatar',
+  'Progress',
+  'Stat',
+  'Alert',
+  'Toggle',
+  'Tabs',
+  'Divider',
+  'Select',
 ];
 
 // Component node in the plan tree

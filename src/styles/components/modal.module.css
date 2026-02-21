@@ -1,4 +1,4 @@
-/* Modal — Centered Dialog */
+/* Modal — Premium Dialog */
 .overlay {
   position: fixed;
   inset: 0;
@@ -10,6 +10,7 @@
   justify-content: center;
   z-index: 100;
   animation: fadeIn 200ms ease;
+  padding: var(--space-lg);
 }
 
 .modal {
@@ -17,21 +18,36 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-2xl);
   width: 90%;
-  max-width: 520px;
   max-height: 85vh;
   overflow-y: auto;
   box-shadow: var(--shadow-xl);
   animation: slideUp 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.modalHeader {
+.sm {
+  max-width: 380px;
+}
+
+.md {
+  max-width: 520px;
+}
+
+.lg {
+  max-width: 680px;
+}
+
+.xl {
+  max-width: 860px;
+}
+
+.header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: var(--space-xl) var(--space-xl) var(--space-md);
 }
 
-.modalTitle {
+.title {
   font-size: 1.05rem;
   font-weight: 700;
   color: var(--color-text-primary);
@@ -58,11 +74,14 @@
   color: var(--color-text-primary);
 }
 
-.modalBody {
+.body {
   padding: 0 var(--space-xl) var(--space-xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
 }
 
-.modalFooter {
+.footer {
   display: flex;
   justify-content: flex-end;
   gap: var(--space-sm);

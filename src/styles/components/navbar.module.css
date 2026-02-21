@@ -1,32 +1,50 @@
-/* Navbar — Clean Minimal Header */
+/* Navbar — Premium Glassmorphism Header */
 .navbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 var(--space-xl);
-  background: rgba(10, 13, 15, 0.7);
+  background: rgba(9, 9, 11, 0.75);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--color-border);
-  height: 52px;
+  height: 54px;
   position: relative;
+  z-index: 5;
 }
 
-.navTitle {
+.navbar::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.10), transparent);
+  pointer-events: none;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 0.95rem;
   font-weight: 700;
   color: var(--color-text-primary);
   letter-spacing: -0.03em;
 }
 
-.navLinks {
+.brandIcon {
+  font-size: 1.1rem;
+}
+
+.nav {
   display: flex;
   align-items: center;
   gap: var(--space-xs);
-  list-style: none;
 }
 
-.navLink {
+.link {
   padding: 6px 14px;
   font-size: 0.8rem;
   font-weight: 500;
@@ -34,22 +52,20 @@
   cursor: pointer;
   border-radius: var(--radius-full);
   transition: all var(--transition-fast);
-  border: none;
-  background: none;
-  font-family: var(--font-sans);
+  text-decoration: none;
 }
 
-.navLink:hover {
+.link:hover {
   color: var(--color-text-primary);
   background: var(--color-bg-glass-light);
 }
 
-.navLinkActive {
+.linkActive {
   color: var(--color-accent-primary);
   background: var(--color-accent-surface);
 }
 
-.navActions {
+.actions {
   display: flex;
   align-items: center;
   gap: var(--space-sm);

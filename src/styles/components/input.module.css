@@ -1,13 +1,28 @@
-/* Input — Clean Form Control */
+/* Input — Premium Form Control */
 .inputWrapper {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
+.sm .input {
+  padding: 7px 12px;
+  font-size: 0.78rem;
+}
+
+.md .input {
+  padding: 10px 14px;
+  font-size: 0.85rem;
+}
+
+.lg .input {
+  padding: 13px 18px;
+  font-size: 0.92rem;
+}
+
 .label {
   font-size: 0.78rem;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--color-text-secondary);
   letter-spacing: 0.01em;
 }
@@ -17,7 +32,12 @@
   margin-left: 3px;
 }
 
+.inputContainer {
+  position: relative;
+}
+
 .input {
+  width: 100%;
   font-family: var(--font-sans);
   font-size: 0.85rem;
   color: var(--color-text-primary);
@@ -30,27 +50,37 @@
 }
 
 .input:focus {
-  border-color: var(--color-border-active);
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.05);
+  border-color: var(--color-border-focus);
+  box-shadow: var(--shadow-input-focus);
+  background: var(--color-bg-glass-medium);
 }
 
 .input::placeholder {
   color: var(--color-text-muted);
 }
 
-.error {
+.input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.errorInput {
   border-color: var(--color-error) !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.06);
 }
 
 .errorText {
   font-size: 0.72rem;
   color: var(--color-error);
+  font-weight: 500;
 }
 
-.select {
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%234d5b66' fill='none' stroke-width='1.5'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
-  padding-right: 32px;
+.helperText {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
 }

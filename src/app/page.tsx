@@ -7,6 +7,7 @@ import { CodePanel } from '@/components/layout/CodePanel';
 import { VersionHistory } from '@/components/layout/VersionHistory';
 import { PreviewPanel } from '@/components/preview/PreviewPanel';
 import { ChatMessage, GenerationResult, ComponentNode, ComponentType, VersionEntry } from '@/types';
+import { Template } from '@/lib/templates';
 import {
   Sparkles,
   PanelLeft,
@@ -33,7 +34,10 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<ViewTab>('split');
   const [previewError, setPreviewError] = useState<string | undefined>();
 
-  // Handle generation result
+  // Ref to avoid stale closures for the latest version number
+  const versionCounterRef = React.useRef(0);
+
+  // Apply generation result
   const applyGenerationResult = useCallback((result: GenerationResult) => {
     setCurrentCode(result.generation.code);
     setComponentList(result.generation.componentList);
@@ -42,19 +46,58 @@ export default function Home() {
     setCurrentVersion(result.version);
     setPreviewError(undefined);
 
-    // Add to versions
-    setVersions(prev => [
-      ...prev,
-      {
-        version: result.version,
-        code: result.generation.code,
-        prompt: result.userPrompt,
-        plan: result.plan,
-        explanation: result.explanation,
-        timestamp: result.timestamp,
-      },
-    ]);
+    // Keep ref counter in sync so templates always get the next version
+    if (result.version > versionCounterRef.current) {
+      versionCounterRef.current = result.version;
+    }
+
+    // Only add if this version doesn't already exist
+    setVersions(prev => {
+      if (prev.some(v => v.version === result.version)) return prev;
+      return [
+        ...prev,
+        {
+          version: result.version,
+          code: result.generation.code,
+          prompt: result.userPrompt,
+          plan: result.plan,
+          explanation: result.explanation,
+          timestamp: result.timestamp,
+        },
+      ];
+    });
   }, []);
+
+  // Load template (instant — no API call)
+  const handleLoadTemplate = useCallback((template: Template) => {
+    versionCounterRef.current += 1;
+    const nextVersion = versionCounterRef.current;
+
+    const result = {
+      ...template.result,
+      version: nextVersion,
+      timestamp: new Date().toISOString(),
+    };
+
+    applyGenerationResult(result);
+
+    // Add template messages to chat
+    const userMsg: ChatMessage = {
+      id: `user-tpl-${Date.now()}`,
+      role: 'user',
+      content: `📐 Template: ${template.name}`,
+      timestamp: new Date().toISOString(),
+    };
+    const assistantMsg: ChatMessage = {
+      id: `assistant-tpl-${Date.now()}`,
+      role: 'assistant',
+      content: result.explanation.explanation,
+      timestamp: new Date().toISOString(),
+      generationResult: result,
+    };
+    setMessages(prev => [...prev, userMsg, assistantMsg]);
+    setActiveTab('preview');
+  }, [applyGenerationResult]);
 
   // Send message handler
   const handleSendMessage = useCallback(async (message: string) => {
@@ -72,7 +115,6 @@ export default function Home() {
       let response: Response;
 
       if (currentCode) {
-        // Modification mode
         response = await fetch('/api/modify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -85,7 +127,6 @@ export default function Home() {
           }),
         });
       } else {
-        // Generation mode
         response = await fetch('/api/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -155,12 +196,8 @@ export default function Home() {
   const handleRegenerate = useCallback(async () => {
     const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
     if (!lastUserMsg) return;
-
-    // Clear current code to force full regeneration
     setCurrentCode('');
     setCurrentVersion(null);
-
-    // Re-send the last user message
     handleSendMessage(lastUserMsg.content);
   }, [messages, handleSendMessage]);
 
@@ -243,6 +280,7 @@ export default function Home() {
           <ChatPanel
             messages={messages}
             onSendMessage={handleSendMessage}
+            onLoadTemplate={handleLoadTemplate}
             isLoading={isLoading}
             hasCode={!!currentCode}
           />

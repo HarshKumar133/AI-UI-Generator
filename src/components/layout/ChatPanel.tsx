@@ -2,7 +2,8 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import styles from '@/styles/components/chatPanel.module.css';
-import { ChatMessage, GenerationResult } from '@/types';
+import { ChatMessage } from '@/types';
+import { TEMPLATES, Template } from '@/lib/templates';
 import {
   MessageSquare,
   Sparkles,
@@ -15,14 +16,27 @@ import {
   Target,
   Bot,
   Brain,
-  ArrowRight,
   Send,
   ChevronRight,
+  Layout,
+  Zap,
+  LucideIcon,
+  ArrowRight,
 } from 'lucide-react';
+
+// Map template icon names to Lucide components
+const TEMPLATE_ICON_MAP: Record<string, LucideIcon> = {
+  BarChart3,
+  Briefcase,
+  ShoppingCart,
+  ClipboardList,
+  TrendingUp,
+};
 
 interface ChatPanelProps {
   messages: ChatMessage[];
   onSendMessage: (message: string) => void;
+  onLoadTemplate?: (template: Template) => void;
   isLoading: boolean;
   hasCode: boolean;
 }
@@ -30,19 +44,19 @@ interface ChatPanelProps {
 export const ChatPanel: React.FC<ChatPanelProps> = ({
   messages,
   onSendMessage,
+  onLoadTemplate,
   isLoading,
   hasCode,
 }) => {
   const [input, setInput] = useState('');
+  const [showTemplates, setShowTemplates] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
 
-  // Auto-resize textarea
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = '44px';
@@ -63,9 +77,15 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     }
   };
 
-  const formatTime = (timestamp: string) => {
-    return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const handleTemplateClick = (template: Template) => {
+    if (onLoadTemplate) {
+      onLoadTemplate(template);
+      setShowTemplates(false);
+    }
   };
+
+  const formatTime = (timestamp: string) =>
+    new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   const suggestions = [
     { icon: BarChart3, label: 'Analytics Dashboard', color: 'emerald' },
@@ -76,6 +96,11 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     { icon: Target, label: 'Task Board', color: 'cyan' },
   ];
 
+  // Resolve a template icon name to a Lucide component
+  const getTemplateIcon = (iconName: string) => {
+    return TEMPLATE_ICON_MAP[iconName] || BarChart3;
+  };
+
   return (
     <div className={styles.chatPanel}>
       {/* Header */}
@@ -84,20 +109,72 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           <MessageSquare size={16} className={styles.headerIcon} />
           AI Chat
         </div>
-        <span className={`${styles.headerBadge} ${hasCode ? styles.headerBadgeModify : ''}`}>
-          {hasCode ? (
-            <><Pencil size={11} /> Modify</>
-          ) : (
-            <><Sparkles size={11} /> Generate</>
-          )}
-        </span>
+        <div className={styles.headerRight}>
+          <button
+            className={`${styles.templateToggle} ${showTemplates ? styles.templateToggleActive : ''}`}
+            onClick={() => setShowTemplates(!showTemplates)}
+          >
+            <Layout size={12} />
+            Templates
+          </button>
+          <span className={`${styles.headerBadge} ${hasCode ? styles.headerBadgeModify : ''}`}>
+            {hasCode ? (
+              <><Pencil size={11} /> Modify</>
+            ) : (
+              <><Sparkles size={11} /> Generate</>
+            )}
+          </span>
+        </div>
       </div>
 
       {/* Messages */}
       <div className={styles.messages}>
-        {messages.length === 0 && !isLoading ? (
+        {/* ── Template Gallery (shown when Templates button is toggled) ── */}
+        {showTemplates ? (
+          <div className={styles.templateGallery}>
+            <div className={styles.galleryHeader}>
+              <Zap size={16} className={styles.galleryIcon} />
+              <div>
+                <div className={styles.galleryTitle}>Instant Templates</div>
+                <div className={styles.galleryDesc}>Load a prebuilt UI instantly</div>
+              </div>
+            </div>
+            <div className={styles.galleryGrid}>
+              {TEMPLATES.map((tpl) => {
+                const IconComp = getTemplateIcon(tpl.icon);
+                return (
+                  <button
+                    key={tpl.id}
+                    className={styles.galleryCard}
+                    onClick={() => handleTemplateClick(tpl)}
+                  >
+                    <div className={styles.galleryCardTop}>
+                      <div className={styles.galleryCardIconWrap}>
+                        <IconComp size={20} />
+                      </div>
+                      <div className={styles.galleryCardMeta}>
+                        <div className={styles.galleryCardName}>{tpl.name}</div>
+                        <div className={styles.galleryCardDesc}>{tpl.description}</div>
+                      </div>
+                    </div>
+                    <div className={styles.galleryCardBottom}>
+                      <div className={styles.galleryCardTags}>
+                        {tpl.tags.slice(0, 3).map(tag => (
+                          <span key={tag} className={styles.galleryTag}>{tag}</span>
+                        ))}
+                      </div>
+                      <div className={styles.galleryCardAction}>
+                        Use <ArrowRight size={11} />
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : messages.length === 0 && !isLoading ? (
+          /* ── Empty State ── */
           <div className={styles.emptyState}>
-            {/* Hero Section */}
             <div className={styles.heroGlow} />
             <div className={styles.emptyIcon}>
               <Sparkles size={42} className={styles.mainSparkle} />
@@ -107,14 +184,12 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               Describe any UI in natural language — dashboards, forms, admin panels — and watch it come to life.
             </div>
 
-            {/* Label */}
             <div className={styles.suggestionsLabel}>
               <span className={styles.suggestionsLine} />
               <span>TRY AN EXAMPLE</span>
               <span className={styles.suggestionsLine} />
             </div>
 
-            {/* Suggestion Grid — 2 columns */}
             <div className={styles.suggestions}>
               {suggestions.map((s) => {
                 const Icon = s.icon;
@@ -137,6 +212,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             </div>
           </div>
         ) : (
+          /* ── Message List ── */
           <>
             {messages.map((msg) => (
               <div
@@ -148,10 +224,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                     <Bot size={16} />
                   </div>
                 )}
-                <div className={styles.messageBubble}>
-                  {msg.content}
-                </div>
-                {/* Show explanation for assistant messages with generation results */}
+                <div className={styles.messageBubble}>{msg.content}</div>
                 {msg.role === 'assistant' && msg.generationResult?.explanation && (
                   <div className={styles.explanation}>
                     <div className={styles.explanationTitle}>
@@ -174,7 +247,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           </>
         )}
 
-        {/* Loading indicator — animated shimmer */}
         {isLoading && (
           <div className={`${styles.message} ${styles.messageAssistant}`}>
             <div className={styles.messageAvatar}>
@@ -184,11 +256,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               <div className={styles.loadingShimmer} />
               <div className={styles.loadingText}>
                 <span>Generating your UI</span>
-                <span className={styles.loadingDots}>
-                  <span />
-                  <span />
-                  <span />
-                </span>
+                <span className={styles.loadingDots}><span /><span /><span /></span>
               </div>
               <div className={styles.loadingSteps}>
                 <div className={`${styles.loadingStep} ${styles.loadingStepActive}`}>
@@ -208,7 +276,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area — Floating Action Bar */}
+      {/* Input Area */}
       <div className={styles.inputArea}>
         <div className={styles.inputContainer}>
           <textarea
@@ -223,9 +291,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             id="chat-input"
           />
           <div className={styles.inputActions}>
-            <span className={styles.keyboardHint}>
-              ⏎ Enter
-            </span>
+            <span className={styles.keyboardHint}>⏎ Enter</span>
             <button
               className={styles.sendButton}
               onClick={handleSubmit}

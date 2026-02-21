@@ -1,4 +1,4 @@
-/* Table — Clean Data Table */
+/* Table — Premium Data Table */
 .tableWrapper {
   width: 100%;
   overflow-x: auto;
@@ -13,37 +13,54 @@
   font-size: 0.82rem;
 }
 
-.table th {
+.th {
   text-align: left;
-  padding: 12px 16px;
-  font-size: 0.7rem;
-  font-weight: 600;
+  padding: 14px 18px;
+  font-size: 0.68rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   color: var(--color-text-muted);
   border-bottom: 1px solid var(--color-border);
-  background: rgba(255, 255, 255, 0.01);
+  background: rgba(255, 255, 255, 0.015);
+  white-space: nowrap;
 }
 
-.table td {
-  padding: 11px 16px;
+.td {
+  padding: 12px 18px;
   color: var(--color-text-secondary);
   border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+  font-variant-numeric: tabular-nums;
 }
 
-.table tr:last-child td {
+.tr:last-child .td {
   border-bottom: none;
 }
 
-.table tr:hover td {
+.tr {
+  transition: background var(--transition-fast);
+}
+
+.hoverable .tr:hover .td {
   background: var(--color-accent-surface);
   color: var(--color-text-primary);
 }
 
-.table tr {
-  transition: background var(--transition-fast);
+.striped .tr:nth-child(even) .td {
+  background: rgba(255, 255, 255, 0.015);
 }
 
-.striped tbody tr:nth-child(even) td {
-  background: rgba(255, 255, 255, 0.015);
+.compact .th {
+  padding: 8px 12px;
+}
+
+.compact .td {
+  padding: 6px 12px;
+}
+
+.emptyState {
+  text-align: center;
+  padding: var(--space-xl);
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
 }

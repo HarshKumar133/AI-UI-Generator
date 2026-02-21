@@ -1,79 +1,126 @@
 /* Chart — Premium Data Visualization */
 .chartWrapper {
-  padding: var(--space-md);
+  padding: var(--space-sm) 0;
 }
 
 .chartTitle {
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   font-weight: 600;
   color: var(--color-text-primary);
-  margin-bottom: var(--space-xs);
+  margin-bottom: var(--space-md);
   letter-spacing: -0.02em;
 }
 
-.chartSubtitle {
-  font-size: 0.78rem;
-  color: var(--color-text-muted);
-  margin-bottom: var(--space-md);
-}
-
 .chartContainer {
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
-  min-height: 160px;
-  padding-top: var(--space-md);
+  min-height: 120px;
 }
 
 /* ---- BAR CHART ---- */
-.bar {
+.barChart {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  width: 100%;
+  padding-top: var(--space-sm);
+}
+
+.barGroup {
   flex: 1;
-  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
-  background: linear-gradient(180deg, var(--color-accent-primary), var(--color-accent-secondary));
-  min-height: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+  justify-content: flex-end;
+}
+
+.bar {
+  width: 100%;
+  max-width: 48px;
+  border-radius: var(--radius-sm) var(--radius-sm) 2px 2px;
+  min-height: 8px;
   transition: all var(--transition-normal);
   position: relative;
-  box-shadow: 0 0 12px rgba(16, 185, 129, 0.08);
 }
 
 .bar:hover {
-  filter: brightness(1.15);
-  box-shadow: 0 0 20px rgba(16, 185, 129, 0.15);
+  filter: brightness(1.2);
+  transform: scaleY(1.02);
+  transform-origin: bottom;
 }
 
 .barLabel {
   text-align: center;
-  font-size: 0.65rem;
+  font-size: 0.62rem;
   color: var(--color-text-muted);
-  margin-top: 6px;
   font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 60px;
 }
 
 .barValue {
   text-align: center;
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   color: var(--color-text-secondary);
-  margin-bottom: 4px;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- LINE CHART ---- */
+.lineChart {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lineSvg {
+  width: 100%;
+  height: auto;
+}
+
+.lineLabels {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 8px;
+}
+
+.lineLabel {
+  font-size: 0.6rem;
+  color: var(--color-text-muted);
+  font-weight: 500;
 }
 
 /* ---- PIE CHART ---- */
-.pieContainer {
+.pieChart {
   display: flex;
   align-items: center;
   gap: var(--space-xl);
-  padding: var(--space-md) 0;
+  padding: var(--space-sm) 0;
 }
 
 .pieSvg {
+  width: 140px;
+  height: 140px;
   flex-shrink: 0;
-  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.2));
 }
 
-.pieLegend {
+.pieSlice {
+  transition: all var(--transition-fast);
+}
+
+.pieSlice:hover {
+  filter: brightness(1.2);
+  transform-origin: center;
+}
+
+.legend {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  flex: 1;
 }
 
 .legendItem {
@@ -84,7 +131,7 @@
   color: var(--color-text-secondary);
 }
 
-.legendDot {
+.legendColor {
   width: 10px;
   height: 10px;
   border-radius: var(--radius-full);
@@ -99,17 +146,4 @@
   font-weight: 600;
   color: var(--color-text-primary);
   font-variant-numeric: tabular-nums;
-}
-
-/* ---- AXIS ---- */
-.chartAxis {
-  display: flex;
-  justify-content: space-between;
-  padding-top: var(--space-sm);
-  border-top: 1px solid var(--color-border);
-}
-
-.axisLabel {
-  font-size: 0.65rem;
-  color: var(--color-text-muted);
 }
