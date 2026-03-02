@@ -30,20 +30,25 @@ const BarChart: React.FC<{ data: ChartDataPoint[]; height: number }> = ({ data, 
 
   return (
     <div className={styles.barChart} style={{ height }}>
-      {data.map((point, i) => (
-        <div key={i} className={styles.barGroup}>
-          <span className={styles.barValue}>{point.value.toLocaleString()}</span>
-          <div
-            className={styles.bar}
-            style={{
-              height: `${(point.value / maxValue) * 100}%`,
-              backgroundColor: point.color || CHART_COLORS[i % CHART_COLORS.length],
-              boxShadow: `0 0 12px ${(point.color || CHART_COLORS[i % CHART_COLORS.length])}20`,
-            }}
-          />
-          <span className={styles.barLabel}>{point.label}</span>
-        </div>
-      ))}
+      {data.map((point, i) => {
+        const barColor = point.color || CHART_COLORS[i % CHART_COLORS.length];
+        const pct = Math.max((point.value / maxValue) * 100, 4); // min 4% so bar is visible
+        return (
+          <div key={i} className={styles.barGroup}>
+            <span className={styles.barValue}>{point.value.toLocaleString()}</span>
+            <div
+              className={styles.bar}
+              style={{
+                height: `${pct}%`,
+                backgroundColor: barColor,
+                boxShadow: `0 0 12px ${barColor}30`,
+                minHeight: 12,
+              }}
+            />
+            <span className={styles.barLabel}>{point.label}</span>
+          </div>
+        );
+      })}
     </div>
   );
 };
@@ -64,19 +69,22 @@ const LineChart: React.FC<{ data: ChartDataPoint[]; height: number }> = ({ data,
   const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
   const areaD = `${pathD} L ${points[points.length - 1].x} ${svgHeight - padding} L ${points[0].x} ${svgHeight - padding} Z`;
 
+  // Unique ID per instance to avoid SVG gradient collisions
+  const gradId = React.useId();
+
   return (
     <div className={styles.lineChart}>
       <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className={styles.lineSvg}>
         <defs>
-          <linearGradient id="lineGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#10b981" stopOpacity="0.2" />
-            <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
+          <linearGradient id={gradId} x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#10b981" stopOpacity="0.4" />
+            <stop offset="100%" stopColor="#10b981" stopOpacity="0.05" />
           </linearGradient>
         </defs>
-        <path d={areaD} fill="url(#lineGrad)" />
-        <path d={pathD} fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        <path d={areaD} fill={`url(#${gradId})`} />
+        <path d={pathD} fill="none" stroke="#10b981" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
         {points.map((p, i) => (
-          <circle key={i} cx={p.x} cy={p.y} r="4" fill="#10b981" stroke="#0a0d0f" strokeWidth="2" />
+          <circle key={i} cx={p.x} cy={p.y} r="5" fill="#10b981" stroke="#0f1214" strokeWidth="2.5" />
         ))}
       </svg>
       <div className={styles.lineLabels}>

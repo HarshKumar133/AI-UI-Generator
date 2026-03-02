@@ -29,11 +29,16 @@ export const Toggle: React.FC<ToggleProps> = ({ label, checked: controlledChecke
                 onClick={handleClick}
                 disabled={disabled}
                 style={{
-                    width: w, height: h, borderRadius: 9999, border: 'none', padding: 2,
+                    width: w, minWidth: w, maxWidth: w,
+                    height: h, minHeight: h, maxHeight: h,
+                    borderRadius: 9999, border: 'none', padding: 2,
                     background: isChecked ? '#10b981' : 'rgba(255,255,255,0.1)',
                     cursor: disabled ? 'not-allowed' : 'pointer',
                     transition: 'background 200ms ease', position: 'relative',
                     boxShadow: isChecked ? '0 0 8px rgba(16,185,129,0.3)' : 'none',
+                    display: 'inline-flex', alignItems: 'center',
+                    flexShrink: 0, overflow: 'hidden',
+                    boxSizing: 'content-box',
                 }}
             >
                 <div style={{
@@ -41,6 +46,7 @@ export const Toggle: React.FC<ToggleProps> = ({ label, checked: controlledChecke
                     transition: 'transform 200ms ease',
                     transform: isChecked ? `translateX(${w - d - 4}px)` : 'translateX(0)',
                     boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                    flexShrink: 0,
                 }} />
             </button>
             {label && <span style={{ fontSize: '0.82rem', color: '#c8d0d9', fontWeight: 500 }}>{label}</span>}

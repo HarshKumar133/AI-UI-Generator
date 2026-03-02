@@ -2,28 +2,31 @@
 
 import React from 'react';
 import styles from '@/styles/components/previewPanel.module.css';
-import { ComponentRenderer } from './ComponentRenderer';
 import { ComponentNode } from '@/types';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import {
-    Eye,
-    AlertTriangle,
-} from 'lucide-react';
+import { ComponentRenderer } from './ComponentRenderer';
+import LivePreview from './LivePreview';
+import { Eye, AlertTriangle } from 'lucide-react';
 
 interface PreviewPanelProps {
     components: ComponentNode[];
     layout: string;
     version: number | null;
     error?: string;
+    code?: string;
+    htmlOutput?: string;
+    title?: string;
+    outputMode?: 'tsx' | 'html' | 'nextjs';
 }
 
 export const PreviewPanel: React.FC<PreviewPanelProps> = ({
-    components,
-    layout,
-    version,
-    error,
+    components, layout, version, error, code, htmlOutput, title, outputMode: externalMode,
 }) => {
-    const hasContent = components && components.length > 0;
+    const hasContent = (components && components.length > 0) || !!code || !!htmlOutput;
+    const liveCode = htmlOutput || code;
+    // Use external outputMode if provided, otherwise auto-detect from content
+    const outputMode: 'html' | 'tsx' | 'nextjs' = externalMode || (htmlOutput ? 'html' : 'tsx');
+
 
     if (error) {
         return (
@@ -55,7 +58,6 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({
                     </div>
                 </div>
                 <div className={styles.emptyState}>
-                    {/* CSS Wireframe Illustration */}
                     <div className={styles.wireframe}>
                         <div className={styles.wireframeNav}>
                             <div className={styles.wireframeDot} />
@@ -81,7 +83,7 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({
                     </div>
                     <div className={styles.emptyTitle}>Live Preview</div>
                     <div className={styles.emptyHint}>
-                        Your generated UI will be rendered here in real-time using the component library.
+                        Your generated UI will be rendered here in real-time.
                     </div>
                 </div>
             </div>
@@ -90,7 +92,6 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({
 
     return (
         <div className={styles.previewPanel}>
-            {/* Header */}
             <div className={styles.header}>
                 <div className={styles.headerLeft}>
                     <Eye size={15} className={styles.headerIconSvg} />
@@ -104,12 +105,15 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({
                 </div>
             </div>
 
-            {/* Preview Content */}
             <div className={styles.previewContainer}>
                 <div className={styles.previewContent}>
-                    <ErrorBoundary>
-                        <ComponentRenderer nodes={components} layout={layout} />
-                    </ErrorBoundary>
+                    {liveCode ? (
+                        <LivePreview code={liveCode} outputMode={outputMode} title={title} />
+                    ) : (
+                        <ErrorBoundary>
+                            <ComponentRenderer nodes={components} layout={layout} />
+                        </ErrorBoundary>
+                    )}
                 </div>
             </div>
         </div>

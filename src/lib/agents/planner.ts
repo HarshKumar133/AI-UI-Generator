@@ -7,281 +7,206 @@ import { PlannerOutput } from '@/types';
 import { callGemini } from './geminiClient';
 import { getComponentDescriptions } from '../validation';
 
-// ---- PROMPT TEMPLATE (Hard-coded, visible in code as required) ----
+// ---- PROMPT TEMPLATE ----
 
-const PLANNER_SYSTEM_PROMPT = `You are the PLANNER agent in a deterministic UI generation pipeline.
+const PLANNER_SYSTEM_PROMPT = `You are the PLANNER agent in a UI generation pipeline.
 
-Your job is to create RICH, DETAILED, and VISUALLY IMPRESSIVE component plans.
+Your job: read the user's request and produce a structured component plan.
+Choose the layout and components that BEST FIT what they asked for — not the most complex option.
 
 CRITICAL RULES:
-- You may ONLY use components from the allowed list below
-- You may NOT invent new components
-- You may NOT suggest inline styles or custom CSS
-- You must output VALID JSON and nothing else
-- ALWAYS generate MULTIPLE components to create a complete, realistic UI
-- NEVER output a single component — always compose 4-8+ components together
+- ONLY use components from the allowed list
+- Output VALID JSON only — no markdown, no code fences
+- Use REALISTIC, MEANINGFUL sample data (real names, numbers, text)
+- Add emoji icons to labels, titles, and buttons where appropriate
 
-QUALITY RULES (VERY IMPORTANT):
-- Use REALISTIC, MEANINGFUL sample data (real names, real numbers, real text)
-- Add emoji icons to labels, titles, and buttons (e.g. "📊 Dashboard", "🚀 Launch", "👤 Users")
-- Every Table MUST have at least 4-5 rows of realistic data
-- Every Chart MUST have 5-7 data points with meaningful labels and values
-- Every Sidebar MUST have 3+ groups with 3-4 items each, using emoji icons
-- Every Navbar MUST have a brand with emoji icon AND 3-5 navigation links
-- Every Card MUST have both a title and subtitle, with meaningful nested content
-- Every Button should have a descriptive label with emoji (e.g. "✨ Generate Report")
-- Every Input MUST have a label and placeholder
-- Every Modal MUST have a title, with form content inside (Inputs + Buttons)
-- USE ALL AVAILABLE PROPS — don't leave props empty
+AVAILABLE LAYOUTS — CHOOSE THE ONE THAT FITS THE REQUEST:
+- "centered": Login/signup forms, single modals, error pages, confirmation screens
+- "single-column": Articles, settings pages, simple lists, step-by-step forms
+- "two-column": Split views, comparison pages, settings with preview
+- "sidebar-layout": Admin panels, file browsers, apps with navigation menus
+- "dashboard": Data dashboards with charts, KPIs, and tables
+- "full-width": Landing pages, marketing pages, full-screen apps
+- "landing-page": Hero + features grid + CTA — for SaaS, product, or portfolio sites
+- "form-page": Clean focused form layout for onboarding/checkout/contact
+- "app-shell": Full app with sidebar + top bar + main scrollable area
 
-AVAILABLE LAYOUTS:
-- "single-column": Components stacked vertically, centered. Best for forms, landing pages.
-- "two-column": Two equal columns side by side. Best for comparison, settings pages.
-- "sidebar-layout": Sidebar on the left with main content on the right. Best for admin panels, dashboards.
-- "dashboard": Grid-based layout with Navbar at top + cards/charts grid. Best for data dashboards.
-- "centered": Content centered in the viewport. Best for login forms, modals.
-- "full-width": Content spans the full width. Best for landing pages, data views.
+LAYOUT SELECTION GUIDE (IMPORTANT — follow this!):
+- User asks for "login", "sign in", "sign up", "register" → "centered"
+- User asks for "form", "checkout", "contact", "onboarding" → "form-page" or "centered"
+- User asks for "landing page", "homepage", "marketing", "SaaS site" → "landing-page"
+- User asks for "todo", "list", "notes", "simple app" → "single-column"
+- User asks for "dashboard", "analytics", "metrics", "KPIs" → "dashboard"
+- User asks for "admin panel", "CRM", "management app" → "sidebar-layout"
+- User asks for "settings", "profile page", "preferences" → "two-column"
+- When in doubt → "single-column"
+
+COMPLEXITY GUIDE — match complexity to the request:
+- Simple request (login form, todo) → 2-4 components is FINE
+- Medium request (settings page, profile) → 4-6 components
+- Complex request (dashboard, admin panel) → 6-10 components
 
 ${getComponentDescriptions()}
 
 COMPONENT PROP DETAILS:
 
-Button:
-  - variant: "primary" | "secondary" | "ghost" | "danger" (ALWAYS set a variant)
-  - size: "sm" | "md" | "lg"
-  - children: string (button label text with emoji)
+Button: variant ("primary"|"secondary"|"ghost"|"danger"|"outline"), size ("sm"|"md"|"lg"), children (label)
+Card: title (with emoji), subtitle, children (nested components)
+Input: label (with emoji), placeholder, type ("text"|"email"|"password"|"number"|"search")
+Table: columns [{key, header}] (3-5), data (4-6 rows of realistic objects), striped: true
+Chart: type ("bar"|"line"|"pie"), title, data [{label, value}] (5-7 points), height (250-300)
+Sidebar: title (with emoji), groups [{label, items: [{id, label, icon, active?}]}]
+Navbar: brand (with emoji), items [{label, href}], actions [{label, variant}]
+Stat: label, value, trend ("+12%"), icon (emoji), subtitle
+Badge: variant ("success"|"warning"|"error"|"info"|"default"), children (label text)
+Avatar: name (required), status ("online"|"offline"|"busy"|"away"), size
+Progress: value (0-100), label, color ("emerald"|"blue"|"amber"|"red"|"purple")
+Alert: variant ("info"|"success"|"warning"|"error"), title, children (message text)
+Toggle: label, checked (boolean)
+Divider: label (optional), spacing
+Select: label, options [{value, label}], placeholder
+Tabs: items [{id, label, icon}]
 
-Card:
-  - title: string (with emoji prefix, e.g. "📈 Revenue Overview")
-  - subtitle: string (descriptive subtitle)
-  - footer: React node or string
-  - children: nest other components like Table, Chart, Input, Button inside
-
-Input:
-  - label: string (with emoji, e.g. "📧 Email Address")
-  - placeholder: string (helpful example text)
-  - type: "text" | "email" | "password" | "number" | "search"
-  - error: string (show validation example if relevant)
-
-Table:
-  - columns: [{ "key": "...", "header": "..." }, ...] — ALWAYS 3-5 columns
-  - data: [{...}, ...] — ALWAYS 4-6 rows with realistic data
-  - striped: true (ALWAYS set to true for readability)
-
-Chart:
-  - type: "bar" | "line" | "pie"
-  - title: string (with emoji)
-  - data: [{ "label": "...", "value": number }, ...] — ALWAYS 5-7 data points
-  - height: number (recommend 250-300)
-
-Sidebar:
-  - title: string (with emoji, e.g. "🎯 Navigation")
-  - groups: [{ "label": "Section Name", "items": [{ "id": "...", "label": "...", "icon": "emoji" }, ...] }]
-  - ALWAYS 2-3 groups with 3-4 items each
-
-Navbar:
-  - brand: string (with emoji, e.g. "🚀 AppName")
-  - items: [{ "label": "...", "href": "#" }, ...] — ALWAYS 3-5 items
-  - actions: [{ "label": "...", "variant": "primary" }] — 1-2 action buttons
-
-Modal:
-  - isOpen: true (always true for preview)
-  - title: string (with emoji)
-  - size: "sm" | "md" | "lg"
-  - children: nest Input and Button components inside
-
-OUTPUT FORMAT (strict JSON, no markdown, no code fences):
+OUTPUT FORMAT (strict JSON, no markdown):
 {
-  "layout": "<one of the layout options>",
+  "layout": "<layout name>",
   "components": [
     {
       "type": "<ComponentName>",
-      "props": { ... all relevant props ... },
-      "children": [ ... nested components or strings ... ]
+      "props": { ...all props... },
+      "children": [ ...nested component objects or strings... ]
     }
   ],
-  "reasoning": "<brief explanation of layout and component choices>"
+  "reasoning": "<one sentence explaining the choice>"
 }
 
-Children can be either nested component objects or plain strings for text content.
-ALWAYS prefer nesting components inside Cards for better visual structure.
-ALWAYS use the most complex appropriate layout (dashboard > sidebar-layout > two-column > single-column).
+Children can be nested component objects or plain strings for text.
 
-EXAMPLE OF PREMIUM QUALITY (this is the minimum bar):
-If a user asks for a "restaurant analytics dashboard", you should output something like this:
+--- EXAMPLES ---
 
+User: "a login page"
 {
-  "layout": "sidebar-layout",
+  "layout": "centered",
   "components": [
     {
-      "type": "Sidebar",
-      "props": {
-        "title": "🍽️ RestaurantOS",
-        "groups": [
-          {
-            "label": "ANALYTICS",
-            "items": [
-              {"id": "overview", "label": "📊 Overview", "icon": "📊", "active": true},
-              {"id": "sales", "label": "💰 Sales Report", "icon": "💰"},
-              {"id": "menu", "label": "🍔 Menu Performance", "icon": "🍔"}
-            ]
-          },
-          {
-            "label": "OPERATIONS",
-            "items": [
-              {"id": "orders", "label": "📋 Live Orders", "icon": "📋"},
-              {"id": "inventory", "label": "📦 Inventory", "icon": "📦"},
-              {"id": "staff", "label": "👨‍🍳 Staff Schedule", "icon": "👨‍🍳"}
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "type": "Navbar",
-      "props": {
-        "brand": "🍽️ RestaurantOS",
-        "items": [
-          {"label": "Overview", "href": "#"},
-          {"label": "Analytics", "href": "#"},
-          {"label": "Reports", "href": "#"}
-        ],
-        "actions": [
-          {"label": "📊 Export Data", "variant": "secondary"},
-          {"label": "⚙️ Settings", "variant": "ghost"}
-        ]
-      }
-    },
-    {
       "type": "Card",
-      "props": {
-        "title": "📈 Revenue Analytics",
-        "subtitle": "Last 6 months of sales performance"
-      },
+      "props": { "title": "🔐 Sign In", "subtitle": "Welcome back — sign in to your account" },
       "children": [
-        {
-          "type": "Chart",
-          "props": {
-            "type": "bar",
-            "title": "Monthly Revenue ($)",
-            "height": 280,
-            "data": [
-              {"label": "Aug", "value": 42350},
-              {"label": "Sep", "value": 48200},
-              {"label": "Oct", "value": 51400},
-              {"label": "Nov", "value": 47800},
-              {"label": "Dec", "value": 63200},
-              {"label": "Jan", "value": 58900}
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "type": "Card",
-      "props": {
-        "title": "🍕 Top Menu Items",
-        "subtitle": "Best selling dishes this month"
-      },
-      "children": [
-        {
-          "type": "Table",
-          "props": {
-            "columns": [
-              {"key": "item", "header": "Item"},
-              {"key": "orders", "header": "Orders"},
-              {"key": "revenue", "header": "Revenue"},
-              {"key": "rating", "header": "Rating"}
-            ],
-            "data": [
-              {"item": "Margherita Pizza", "orders": "342", "revenue": "$4,104", "rating": "⭐ 4.8"},
-              {"item": "Caesar Salad", "orders": "289", "revenue": "$2,601", "rating": "⭐ 4.6"},
-              {"item": "Truffle Pasta", "orders": "267", "revenue": "$4,272", "rating": "⭐ 4.9"},
-              {"item": "Grilled Salmon", "orders": "203", "revenue": "$4,263", "rating": "⭐ 4.7"},
-              {"item": "Tiramisu", "orders": "198", "revenue": "$1,386", "rating": "⭐ 4.9"}
-            ],
-            "striped": true
-          }
-        }
+        { "type": "Input", "props": { "label": "📧 Email", "placeholder": "you@company.com", "type": "email" } },
+        { "type": "Input", "props": { "label": "🔑 Password", "placeholder": "Enter your password", "type": "password" } },
+        { "type": "Button", "props": { "variant": "primary", "size": "lg" }, "children": ["Sign In →"] },
+        { "type": "Divider", "props": { "label": "or" } },
+        { "type": "Button", "props": { "variant": "outline" }, "children": ["Continue with Google"] }
       ]
     }
   ],
-  "reasoning": "Used sidebar-layout for a professional dashboard. Included Sidebar with 6 grouped nav items, Navbar with actions, revenue Chart with 6 months of realistic data, and Table with 5 top-selling dishes. All components have emoji icons and detailed, realistic data."
+  "reasoning": "Centered layout with a single Card form — perfect for login screens."
 }
 
-THIS IS THE MINIMUM COMPLEXITY. Your output should be AT LEAST this detailed.`;
+User: "a todo app"
+{
+  "layout": "single-column",
+  "components": [
+    { "type": "Navbar", "props": { "brand": "✅ TaskFlow", "items": [], "actions": [{"label": "Sign Out", "variant": "ghost"}] } },
+    {
+      "type": "Card",
+      "props": { "title": "📝 My Tasks", "subtitle": "3 tasks remaining today" },
+      "children": [
+        { "type": "Input", "props": { "label": "", "placeholder": "Add a new task and press Enter..." } },
+        { "type": "Divider", "props": {} },
+        { "type": "Table", "props": {
+          "columns": [{"key":"task","header":"Task"},{"key":"priority","header":"Priority"},{"key":"due","header":"Due"},{"key":"status","header":"Status"}],
+          "data": [
+            {"task":"Finish project proposal","priority":"🔴 High","due":"Today","status":"In Progress"},
+            {"task":"Review pull requests","priority":"🟡 Medium","due":"Tomorrow","status":"Pending"},
+            {"task":"Update documentation","priority":"🟢 Low","due":"Fri","status":"Pending"},
+            {"task":"Deploy to production","priority":"🔴 High","due":"Today","status":"Done"},
+            {"task":"Team standup meeting","priority":"🟡 Medium","due":"Daily","status":"Done"}
+          ],
+          "striped": true
+        }}
+      ]
+    }
+  ],
+  "reasoning": "Single-column layout with a Navbar, task input, and table for a clean todo app."
+}
+
+User: "analytics dashboard for e-commerce"
+{
+  "layout": "dashboard",
+  "components": [
+    { "type": "Navbar", "props": { "brand": "🛒 ShopMetrics", "items": [{"label":"Overview","href":"#"},{"label":"Orders","href":"#"},{"label":"Customers","href":"#"}], "actions": [{"label":"📊 Export","variant":"secondary"}] } },
+    { "type": "Stat", "props": { "label": "Total Revenue", "value": "$48,295", "trend": "+18.2%", "icon": "💰", "subtitle": "vs last month" } },
+    { "type": "Stat", "props": { "label": "Orders", "value": "1,284", "trend": "+9.4%", "icon": "📦", "subtitle": "this month" } },
+    { "type": "Stat", "props": { "label": "Avg Order Value", "value": "$37.60", "trend": "+4.1%", "icon": "🧾", "subtitle": "per order" } },
+    { "type": "Card", "props": { "title": "📈 Revenue Trend", "subtitle": "Last 6 months" }, "children": [
+      { "type": "Chart", "props": { "type": "line", "title": "Monthly Revenue", "height": 260, "data": [
+        {"label":"Aug","value":32000},{"label":"Sep","value":38000},{"label":"Oct","value":41000},{"label":"Nov","value":36000},{"label":"Dec","value":52000},{"label":"Jan","value":48295}
+      ]}}
+    ]},
+    { "type": "Card", "props": { "title": "🏆 Top Products", "subtitle": "Best sellers this month" }, "children": [
+      { "type": "Table", "props": { "columns": [{"key":"product","header":"Product"},{"key":"units","header":"Units"},{"key":"revenue","header":"Revenue"},{"key":"status","header":"Status"}], "striped": true, "data": [
+        {"product":"AirPods Pro","units":"428","revenue":"$42,800","status":"In Stock"},
+        {"product":"iPhone Case","units":"389","revenue":"$11,670","status":"In Stock"},
+        {"product":"USB-C Hub","units":"312","revenue":"$15,600","status":"Low Stock"},
+        {"product":"MagSafe Wallet","units":"287","revenue":"$11,480","status":"In Stock"},
+        {"product":"Smart Watch Band","units":"201","revenue":"$6,030","status":"Out of Stock"}
+      ]}}
+    ]}
+  ],
+  "reasoning": "Dashboard layout with Navbar, 3 Stat cards, a line chart, and a top-products table."
+}`;
 
 // ---- PLANNER FUNCTION ----
 
 export async function runPlanner(userPrompt: string): Promise<PlannerOutput> {
-    const userMessage = `User wants the following UI:
-"${userPrompt}"
+  const userMessage = `User wants: "${userPrompt}"
 
-Create a RICH, DETAILED, multi-component plan that would impress a professional designer.
+Create the best component plan to build exactly what they asked for.
+- Choose the layout that fits the request (see the layout selection guide in your system prompt)
+- Match the complexity to the request (simple requests = fewer components)
+- Use realistic sample data
+- Output ONLY the JSON plan, no other text.`;
 
-Requirements:
-- Use AT LEAST 4-6 components (never just 1-2)
-- Choose the most sophisticated layout (sidebar-layout or dashboard preferred)
-- Fill ALL props with realistic, meaningful data
-- Add emoji icons to EVERY title, label, and button
-- Tables MUST have 4-6 rows of realistic data
-- Charts MUST have 5-7 data points with real values
-- Sidebars MUST have multiple groups with 3-4 items each
-- Cards MUST have both title AND subtitle
+  const response = await callGemini(userMessage, PLANNER_SYSTEM_PROMPT);
 
-Output ONLY the JSON plan, no other text.`;
+  let cleanResponse = response.trim();
+  if (cleanResponse.startsWith('`')) {
+    cleanResponse = cleanResponse.replace(/^`{3}(?:json)?\s*\n?/, '').replace(/\n?`{3}\s*$/, '');
+  }
 
-    const response = await callGemini(userMessage, PLANNER_SYSTEM_PROMPT);
+  try {
+    const plan: PlannerOutput = JSON.parse(cleanResponse);
 
-    // Parse the JSON response, stripping any markdown fences the model might add
-    let cleanResponse = response.trim();
-
-    // Remove markdown code fences if present
-    if (cleanResponse.startsWith('`')) {
-        cleanResponse = cleanResponse.replace(/^`{3}(?:json)?\s*\n?/, '').replace(/\n?`{3}\s*$/, '');
+    if (!plan.layout || !plan.components || !Array.isArray(plan.components)) {
+      throw new Error('Invalid plan structure: missing layout or components');
     }
 
-    try {
-        const plan: PlannerOutput = JSON.parse(cleanResponse);
-
-        // Validate the plan structure
-        if (!plan.layout || !plan.components || !Array.isArray(plan.components)) {
-            throw new Error('Invalid plan structure: missing layout or components');
-        }
-
-        // Validate layout value
-        const validLayouts = ['single-column', 'two-column', 'sidebar-layout', 'dashboard', 'centered', 'full-width'];
-        if (!validLayouts.includes(plan.layout)) {
-            plan.layout = 'single-column'; // fallback
-        }
-
-        // Ensure reasoning exists
-        if (!plan.reasoning) {
-            plan.reasoning = 'Plan generated based on user intent.';
-        }
-
-        return plan;
-    } catch (error) {
-        // If JSON parsing fails, create a fallback plan
-        console.error('Planner JSON parse error:', error);
-        console.error('Raw response:', cleanResponse);
-
-        return {
-            layout: 'single-column',
-            components: [
-                {
-                    type: 'Card',
-                    props: { title: 'Generated UI' },
-                    children: [
-                        {
-                            type: 'Button',
-                            props: { variant: 'primary' },
-                            children: ['Get Started'],
-                        },
-                    ],
-                },
-            ],
-            reasoning: 'Fallback plan generated due to parsing error. The AI response could not be parsed as valid JSON.',
-        };
+    const validLayouts = ['single-column', 'two-column', 'sidebar-layout', 'dashboard', 'centered', 'full-width', 'landing-page', 'form-page', 'app-shell'];
+    if (!validLayouts.includes(plan.layout)) {
+      plan.layout = 'single-column';
     }
+
+    if (!plan.reasoning) {
+      plan.reasoning = 'Plan generated based on user intent.';
+    }
+
+    return plan;
+  } catch (error) {
+    console.error('[Planner] JSON parse error:', error);
+    console.error('[Planner] Raw response:', cleanResponse);
+
+    // Fallback plan
+    return {
+      layout: 'single-column',
+      components: [
+        {
+          type: 'Card',
+          props: { title: '⚠️ Generation Failed', subtitle: 'Could not parse the plan — try a different prompt' },
+          children: [{ type: 'Button', props: { variant: 'primary' }, children: ['Try Again'] }],
+        },
+      ],
+      reasoning: 'Fallback: JSON parse error from planner response.',
+    };
+  }
 }
