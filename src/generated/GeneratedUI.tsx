@@ -130,12 +130,13 @@ export default function GeneratedUI() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'radial-gradient(ellipse at 15% 10%, rgba(16,185,129,0.09) 0%, transparent 45%), radial-gradient(ellipse at 85% 80%, rgba(59,130,246,0.07) 0%, transparent 40%), #09090b', color: '#eceff2', fontFamily: "'Inter', system-ui, sans-serif", display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 2rem 2rem 2rem', overflowY: 'auto' }}>
-      <Navbar
-        brand="✅ TaskFlow"
-        items={[]}
-        actions={[{ label: 'Sign Out', variant: 'ghost' }]}
-        style={{ width: '100%', maxWidth: '800px', margin: '0 auto' }}
-      />
+      <div style={{ width: '100%', maxWidth: '800px', margin: '0 auto' }}>
+        <Navbar
+          brand="✅ TaskFlow"
+          items={[]}
+          actions={[{ label: 'Sign Out', variant: 'ghost' }]}
+        />
+      </div>
       <div style={{ position: 'absolute', top: '20%', left: '50%', transform: 'translateX(-50%)', width: 600, height: 600, background: 'radial-gradient(circle, rgba(16,185,129,0.12) 0%, transparent 70%)', pointerEvents: 'none', borderRadius: '50%', zIndex: 0 }} />
 
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', width: '100%', maxWidth: '800px', marginTop: '2.5rem', gap: '1.5rem', zIndex: 1 }}>
