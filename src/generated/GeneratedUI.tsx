@@ -140,102 +140,115 @@ export default function GeneratedUI() {
       <div style={{ position: 'absolute', top: '20%', left: '50%', transform: 'translateX(-50%)', width: 600, height: 600, background: 'radial-gradient(circle, rgba(16,185,129,0.12) 0%, transparent 70%)', pointerEvents: 'none', borderRadius: '50%', zIndex: 0 }} />
 
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', width: '100%', maxWidth: '800px', marginTop: '2.5rem', gap: '1.5rem', zIndex: 1 }}>
-        <Card
+        <div
           onMouseEnter={() => setH(true)}
           onMouseLeave={() => setH(false)}
-          style={{ transform: h ? 'translateY(-5px) scale(1.005)' : 'none', transition: 'all 280ms cubic-bezier(0.34, 1.56, 0.64, 1)', boxShadow: h ? '0 24px 60px rgba(0,0,0,0.45), 0 0 0 1px rgba(16,185,129,0.12)' : '0 2px 12px rgba(0,0,0,0.2)', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 24, backdropFilter: 'blur(12px)', padding: '24px' }}
-          title={
-            <h2 style={{ background: 'linear-gradient(135deg, #f0f2f5 20%, #10b981 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', margin: 0, fontSize: '1.8rem', fontWeight: 800, letterSpacing: '-0.03em' }}>
-              📝 My Tasks
-            </h2>
-          }
-          subtitle={<p style={{ fontSize: '1.1rem', color: '#a0aab4', lineHeight: 1.65, marginTop: '8px' }}>{remainingTasksToday} tasks remaining today</p>}
+          style={{
+            transform: h ? 'translateY(-5px) scale(1.005)' : 'none',
+            transition: 'all 280ms cubic-bezier(0.34, 1.56, 0.64, 1)',
+            boxShadow: h ? '0 24px 60px rgba(0,0,0,0.45), 0 0 0 1px rgba(16,185,129,0.12)' : '0 2px 12px rgba(0,0,0,0.2)',
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(255,255,255,0.07)',
+            borderRadius: 24,
+            backdropFilter: 'blur(12px)',
+            padding: '24px',
+          }}
         >
-          <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
-            <Input
-              label=""
-              placeholder="Add a new task and press Enter..."
-              value={newTaskText}
-              onChange={(e) => setNewTaskText(e.target.value)}
-              onKeyDown={handleAddTask}
-              size="lg"
-              fullWidth
-              style={{ flex: 1 }}
-            />
-          </div>
-          {tasks.length === 0 ? (
-            <Alert variant="info" title="No Tasks Yet!" style={{ marginTop: '24px' }}>
-              Looks like you're all caught up! ✨ Add a new task above to get started.
-            </Alert>
-          ) : (
-            <>
-              <Divider label={<span style={{ color: '#6b7280', fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Today's Focus</span>} spacing="lg" />
-              <Table
-                columns={tableColumns}
-                data={tasks}
-                striped
-                hoverable
-                emptyMessage="No tasks yet. Add one above!"
+          <Card
+            title="📝 My Tasks"
+            subtitle={`${remainingTasksToday} tasks remaining today`}
+          >
+            <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
+              <Input
+                label=""
+                placeholder="Add a new task and press Enter..."
+                value={newTaskText}
+                onChange={(e) => setNewTaskText(e.target.value)}
+                onKeyDown={handleAddTask}
+                size="lg"
+                fullWidth
+                style={{ flex: 1 }}
               />
-            </>
-          )}
-        </Card>
+            </div>
+            {tasks.length === 0 ? (
+              <Alert variant="info" title="No Tasks Yet!" style={{ marginTop: '24px' }}>
+                Looks like you're all caught up! ✨ Add a new task above to get started.
+              </Alert>
+            ) : (
+              <>
+                <Divider label={<span style={{ color: '#6b7280', fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Today's Focus</span>} spacing="lg" />
+                <Table
+                  columns={tableColumns}
+                  data={tasks}
+                  striped
+                  hoverable
+                  emptyMessage="No tasks yet. Add one above!"
+                />
+              </>
+            )}
+          </Card>
+        </div>
 
         {/* Calculator Card */}
-        <Card
-          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 24, backdropFilter: 'blur(12px)', padding: '24px' }}
-          title={
-            <h2 style={{ background: 'linear-gradient(135deg, #f0f2f5 20%, #3b82f6 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', margin: 0, fontSize: '1.8rem', fontWeight: 800, letterSpacing: '-0.03em' }}>
-              🧮 Simple Calculator
-            </h2>
-          }
-          subtitle={<p style={{ fontSize: '1.1rem', color: '#a0aab4', lineHeight: 1.65, marginTop: '8px' }}>Perform basic arithmetic operations.</p>}
+        <div
+          style={{
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(255,255,255,0.07)',
+            borderRadius: 24,
+            backdropFilter: 'blur(12px)',
+            padding: '24px',
+          }}
         >
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '12px', marginBottom: '16px' }}>
+          <Card
+            title="🧮 Simple Calculator"
+            subtitle="Perform basic arithmetic operations."
+          >
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '12px', marginBottom: '16px' }}>
+              <Input
+                label="Number 1"
+                type="number"
+                placeholder="Enter first number"
+                value={num1}
+                onChange={(e) => setNum1(e.target.value)}
+                fullWidth
+              />
+              <Select
+                label="Operation"
+                options={[
+                  { value: '+', label: '+' },
+                  { value: '-', label: '-' },
+                  { value: '*', label: '×' },
+                  { value: '/', label: '÷' },
+                ]}
+                value={operation}
+                onChange={(e) => setOperation(e.target.value as string)}
+                style={{ minWidth: '80px' }}
+              />
+              <Input
+                label="Number 2"
+                type="number"
+                placeholder="Enter second number"
+                value={num2}
+                onChange={(e) => setNum2(e.target.value)}
+                fullWidth
+              />
+            </div>
+            <div style={{ marginBottom: '16px' }}>
+              <Button onClick={handleCalculate} fullWidth>
+                Calculate
+              </Button>
+            </div>
             <Input
-              label="Number 1"
-              type="number"
-              placeholder="Enter first number"
-              value={num1}
-              onChange={(e) => setNum1(e.target.value)}
+              label="Result"
+              value={result}
+              readOnly
+              disabled
+              placeholder="Calculation result"
               fullWidth
+              style={{ opacity: 0.8 }}
             />
-            <Select
-              label="Operation"
-              options={[
-                { value: '+', label: '+' },
-                { value: '-', label: '-' },
-                { value: '*', label: '×' },
-                { value: '/', label: '÷' },
-              ]}
-              value={operation}
-              onChange={(e) => setOperation(e.target.value as string)}
-              style={{ minWidth: '80px' }}
-            />
-            <Input
-              label="Number 2"
-              type="number"
-              placeholder="Enter second number"
-              value={num2}
-              onChange={(e) => setNum2(e.target.value)}
-              fullWidth
-            />
-          </div>
-          <div style={{ marginBottom: '16px' }}>
-            <Button onClick={handleCalculate} fullWidth>
-              Calculate
-            </Button>
-          </div>
-          <Input
-            label="Result"
-            value={result}
-            readOnly
-            disabled
-            placeholder="Calculation result"
-            fullWidth
-            style={{ opacity: 0.8 }}
-          />
-        </Card>
+          </Card>
+        </div>
       </main>
     </div>
   );
