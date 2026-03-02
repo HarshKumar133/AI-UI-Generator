@@ -121,7 +121,7 @@ export default function GeneratedUI() {
       key: 'actions',
       header: 'Actions',
       render: (row: Task) => (
-        <Button variant="ghost" size="sm" onClick={() => handleDeleteTask(row.id)} style={{ color: '#ef4444' }}>
+        <Button variant="danger" size="sm" onClick={() => handleDeleteTask(row.id)}>
           Delete
         </Button>
       ),
@@ -220,9 +220,11 @@ export default function GeneratedUI() {
               fullWidth
             />
           </div>
-          <Button onClick={handleCalculate} fullWidth style={{ marginBottom: '16px' }}>
-            Calculate
-          </Button>
+          <div style={{ marginBottom: '16px' }}>
+            <Button onClick={handleCalculate} fullWidth>
+              Calculate
+            </Button>
+          </div>
           <Input
             label="Result"
             value={result}
