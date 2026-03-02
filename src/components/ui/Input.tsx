@@ -5,7 +5,7 @@ export interface InputProps {
   label?: string;
   placeholder?: string;
   value?: string;
-  onChange?: (value: string) => void;
+  onChange?: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   type?: 'text' | 'email' | 'password' | 'number' | 'search' | 'url';
   disabled?: boolean;
   required?: boolean;
@@ -14,6 +14,10 @@ export interface InputProps {
   size?: 'sm' | 'md' | 'lg';
   multiline?: boolean;
   rows?: number;
+  fullWidth?: boolean;
+  style?: React.CSSProperties;
+  readOnly?: boolean;
+  onKeyDown?: (event: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
 }
 
 export const Input: React.FC<InputProps> = ({
@@ -29,11 +33,18 @@ export const Input: React.FC<InputProps> = ({
   size = 'md',
   multiline = false,
   rows = 3,
+  fullWidth = false,
+  style,
+  readOnly = false,
+  onKeyDown,
 }) => {
   const inputClass = `${styles.input} ${error ? styles.errorInput : ''} ${multiline ? styles.textarea : ''}`;
 
   return (
-    <div className={`${styles.inputWrapper} ${styles[size]}`}>
+    <div
+      className={`${styles.inputWrapper} ${styles[size]}`}
+      style={{ ...(fullWidth ? { width: '100%' } : {}), ...style }}
+    >
       {label && (
         <label className={styles.label}>
           {label}
@@ -46,10 +57,12 @@ export const Input: React.FC<InputProps> = ({
             className={inputClass}
             placeholder={placeholder}
             value={value}
-            onChange={(e) => onChange?.(e.target.value)}
+            onChange={(e) => onChange?.(e)}
             disabled={disabled}
             required={required}
             rows={rows}
+            readOnly={readOnly}
+            onKeyDown={onKeyDown}
           />
         ) : (
           <input
@@ -57,9 +70,11 @@ export const Input: React.FC<InputProps> = ({
             className={inputClass}
             placeholder={placeholder}
             value={value}
-            onChange={(e) => onChange?.(e.target.value)}
+            onChange={(e) => onChange?.(e)}
             disabled={disabled}
             required={required}
+            readOnly={readOnly}
+            onKeyDown={onKeyDown}
           />
         )}
       </div>
