@@ -29,7 +29,7 @@ export default function GeneratedUI() {
   const [operation, setOperation] = React.useState('+');
   const [result, setResult] = React.useState('');
 
-  const handleAddTask = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleAddTask = (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && newTaskText.trim()) {
       const newId = String(tasks.length ? Math.max(...tasks.map(t => parseInt(t.id))) + 1 : 1);
       setTasks([...tasks, { id: newId, text: newTaskText.trim(), priority: 'Medium', due: 'Soon', completed: false }]);
@@ -89,7 +89,7 @@ export default function GeneratedUI() {
 
   const remainingTasksToday = tasks.filter(t => !t.completed && t.due === 'Today').length;
 
-  const tableColumns = [
+  const tableColumns: { key: string; header: string; render?: (row: Task) => React.ReactNode }[] = [
     {
       key: 'task',
       header: 'Task',
@@ -171,15 +171,23 @@ export default function GeneratedUI() {
               />
             </div>
             {tasks.length === 0 ? (
-              <Alert variant="info" title="No Tasks Yet!" style={{ marginTop: '24px' }}>
-                Looks like you're all caught up! ✨ Add a new task above to get started.
-              </Alert>
+              <div style={{ marginTop: '24px' }}>
+                <Alert variant="info" title="No Tasks Yet!">
+                  Looks like you're all caught up! ✨ Add a new task above to get started.
+                </Alert>
+              </div>
             ) : (
               <>
-                <Divider label={<span style={{ color: '#6b7280', fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Today's Focus</span>} spacing="lg" />
+                <Divider label="Today's Focus" spacing="lg" />
                 <Table
                   columns={tableColumns}
-                  data={tasks}
+                  data={tasks.map((task) => ({
+                    task: tableColumns.find(col => col.key === 'task')?.render?.(task),
+                    priority: tableColumns.find(col => col.key === 'priority')?.render?.(task),
+                    due: tableColumns.find(col => col.key === 'due')?.render?.(task),
+                    status: tableColumns.find(col => col.key === 'status')?.render?.(task),
+                    actions: tableColumns.find(col => col.key === 'actions')?.render?.(task),
+                  }))}
                   striped
                   hoverable
                   emptyMessage="No tasks yet. Add one above!"
@@ -212,18 +220,19 @@ export default function GeneratedUI() {
                 onChange={(e) => setNum1(e.target.value)}
                 fullWidth
               />
-              <Select
-                label="Operation"
-                options={[
-                  { value: '+', label: '+' },
-                  { value: '-', label: '-' },
-                  { value: '*', label: '×' },
-                  { value: '/', label: '÷' },
-                ]}
-                value={operation}
-                onChange={(e) => setOperation(e.target.value as string)}
-                style={{ minWidth: '80px' }}
-              />
+              <div style={{ minWidth: '80px' }}>
+                <Select
+                  label="Operation"
+                  options={[
+                    { value: '+', label: '+' },
+                    { value: '-', label: '-' },
+                    { value: '*', label: '×' },
+                    { value: '/', label: '÷' },
+                  ]}
+                  value={operation}
+                  onChange={(value) => setOperation(value)}
+                />
+              </div>
               <Input
                 label="Number 2"
                 type="number"
