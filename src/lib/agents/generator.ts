@@ -337,8 +337,10 @@ export async function runGenerator(plan: PlannerOutput, onEvent?: (e: Generation
 
   const blockCodes = blockResults.map((r, i) => {
     r.components.forEach(c => allUsedComponents.add(c));
-    // Remove individual imports from blocks
+    // Remove individual imports from blocks as well as 'use client'
     let cleanBlock = r.code
+      .replace(/'use client';?\n?/g, '')
+      .replace(/"use client";?\n?/g, '')
       .replace(/import {[^}]+} from ['"]@\/components\/ui['"];?\n?/g, '')
       .replace(/import React[^;]+;?\n?/g, '');
     return `// --- Block: ${blockNames[i]} ---\n${cleanBlock}`;
@@ -346,12 +348,19 @@ export async function runGenerator(plan: PlannerOutput, onEvent?: (e: Generation
 
   // Inject central imports at the top
   const importLine = allUsedComponents.size > 0
-    ? `\nimport { ${Array.from(allUsedComponents).join(', ')} } from '@/components/ui';\n`
+    ? `import { ${Array.from(allUsedComponents).join(', ')} } from '@/components/ui';\n`
     : '';
 
   // Replace shell's UI imports with unified ones, then append the blocks above the default export
   finalCode = finalCode.replace(/import {[^}]+} from ['"]@\/components\/ui['"];?\n?/g, '');
-  finalCode = finalCode.replace(/'use client';\n?/, `'use client';\nimport React from 'react';${importLine}`);
+
+  // Strip any existing 'use client' to prevent duplicates, then prepend cleanly
+  finalCode = finalCode.replace(/'use client';?\n?/g, '');
+  finalCode = finalCode.replace(/"use client";?\n?/g, '');
+  // Also remove redundant React imports from the shell
+  finalCode = finalCode.replace(/import React[^;]+;?\n?/g, '');
+
+  finalCode = `'use client';\nimport React from 'react';\n${importLine}\n${finalCode.trim()}`;
 
   const exportMatch = finalCode.match(/export default function GeneratedUI/);
   if (exportMatch && exportMatch.index !== undefined) {

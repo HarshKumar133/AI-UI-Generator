@@ -59,7 +59,8 @@ export interface PlannerBlock {
 // Output of the Planner agent
 export interface PlannerOutput {
   layout: 'single-column' | 'two-column' | 'sidebar-layout' | 'dashboard' | 'centered' | 'full-width';
-  blocks: PlannerBlock[]; // NEW: UI broken down into independent blocks
+  blocks?: PlannerBlock[]; // NEW: UI broken down into independent blocks
+  components?: ComponentNode[]; // For backwards capability with existing templates
   reasoning: string;
 }
 

@@ -13,6 +13,8 @@ export function getGeminiClient(): GoogleGenerativeAI {
     return genAI;
 }
 
+
+
 export async function callGemini(prompt: string, systemInstruction?: string): Promise<string> {
     const client = getGeminiClient();
     const model = client.getGenerativeModel({
@@ -25,7 +27,16 @@ export async function callGemini(prompt: string, systemInstruction?: string): Pr
         }),
     });
 
-    const result = await model.generateContent(prompt);
-    const response = result.response;
-    return response.text();
+    try {
+        const result = await model.generateContent(prompt);
+        return result.response.text();
+    } catch (error: any) {
+        const isRateLimit = error?.status === 429 || error?.message?.includes('429');
+
+        if (isRateLimit) {
+            throw new Error('your api key quota is over. top up with 5$ to continue service');
+        }
+
+        throw error;
+    }
 }

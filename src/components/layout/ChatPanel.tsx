@@ -200,7 +200,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                     key={s.label}
                     className={`${styles.suggestionChip} ${styles[`chip_${s.color}`] || ''}`}
                     onClick={() => {
-                      setInput(s.label);
                       onSendMessage(s.label);
                     }}
                     disabled={isLoading}

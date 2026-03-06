@@ -196,37 +196,38 @@ export default function Home() {
 
             for (const eventString of events) {
               if (eventString.startsWith('data: ')) {
+                let event;
                 try {
-                  const event = JSON.parse(eventString.replace('data: ', '').trim());
-
-                  if (event.type.endsWith('_start') || event.type === 'agent_start') {
-                    const id = event.agentId || event.type.replace('_start', '');
-                    const name = event.agentName || (id.charAt(0).toUpperCase() + id.slice(1));
-                    setActiveAgents(prev => {
-                      const exists = prev.find(a => a.id === id);
-                      if (exists) return prev.map(a => a.id === id ? { ...a, status: 'working', message: event.message } : a);
-                      return [...prev, { id, name, status: 'working', message: event.message }];
-                    });
-                  } else if (event.type.endsWith('_done') || event.type === 'agent_done') {
-                    const id = event.agentId || event.type.replace('_done', '');
-                    setActiveAgents(prev => prev.map(a => a.id === id ? { ...a, status: 'done', message: event.message } : a));
-                  } else if (event.type === 'error') {
-                    if (event.agentId) {
-                      setActiveAgents(prev => prev.map(a => a.id === event.agentId ? { ...a, status: 'error', message: event.message } : a));
-                      throw new Error(`Agent ${event.agentId} Error: ${event.message}`);
-                    } else {
-                      throw new Error(event.message);
-                    }
-                  } else if (event.type === 'complete') {
-                    const result = event.data as GenerationResult;
-                    applyGenerationResult(result);
-                    const assistantMsg: ChatMessage = { id: `assistant-${Date.now()}`, role: 'assistant', content: result.explanation.explanation, timestamp: new Date().toISOString(), generationResult: result };
-                    setMessages(prev => [...prev, assistantMsg]);
-                    setActiveAgents([]);
-                    setActiveTab('preview');
-                  }
+                  event = JSON.parse(eventString.replace('data: ', '').trim());
                 } catch (parseError) {
-                  // Ignore JSON parse errors from chunk fragments if any somehow slip through
+                  continue; // Ignore JSON parse errors from chunk fragments
+                }
+
+                if (event.type.endsWith('_start') || event.type === 'agent_start') {
+                  const id = event.agentId || event.type.replace('_start', '');
+                  const name = event.agentName || (id.charAt(0).toUpperCase() + id.slice(1));
+                  setActiveAgents(prev => {
+                    const exists = prev.find(a => a.id === id);
+                    if (exists) return prev.map(a => a.id === id ? { ...a, status: 'working', message: event.message } : a);
+                    return [...prev, { id, name, status: 'working', message: event.message }];
+                  });
+                } else if (event.type.endsWith('_done') || event.type === 'agent_done') {
+                  const id = event.agentId || event.type.replace('_done', '');
+                  setActiveAgents(prev => prev.map(a => a.id === id ? { ...a, status: 'done', message: event.message } : a));
+                } else if (event.type === 'error') {
+                  if (event.agentId) {
+                    setActiveAgents(prev => prev.map(a => a.id === event.agentId ? { ...a, status: 'error', message: event.message } : a));
+                    throw new Error(`Agent ${event.agentId} Error: ${event.message}`);
+                  } else {
+                    throw new Error(event.message);
+                  }
+                } else if (event.type === 'complete') {
+                  const result = event.data as GenerationResult;
+                  applyGenerationResult(result);
+                  const assistantMsg: ChatMessage = { id: `assistant-${Date.now()}`, role: 'assistant', content: result.explanation.explanation, timestamp: new Date().toISOString(), generationResult: result };
+                  setMessages(prev => [...prev, assistantMsg]);
+                  setActiveAgents([]);
+                  setActiveTab('preview');
                 }
               }
             }
