@@ -3,7 +3,7 @@
 // Interprets user intent → Chooses layout → Selects components → Outputs structured plan
 // ============================================
 
-import { PlannerOutput } from '@/types';
+import { PlannerOutput, PlannerBlock } from '@/types';
 import { callGemini } from './geminiClient';
 import { getComponentDescriptions } from '../validation';
 
@@ -70,15 +70,23 @@ Tabs: items [{id, label, icon}]
 OUTPUT FORMAT (strict JSON, no markdown):
 {
   "layout": "<layout name>",
-  "components": [
+  "blocks": [
     {
-      "type": "<ComponentName>",
-      "props": { ...all props... },
-      "children": [ ...nested component objects or strings... ]
+      "id": "<block_id_kebab_case>",
+      "description": "<What this block does and looks like>",
+      "components": [
+        {
+          "type": "<ComponentName>",
+          "props": { ...all props... },
+          "children": [ ...nested component objects or strings... ]
+        }
+      ]
     }
   ],
   "reasoning": "<one sentence explaining the choice>"
 }
+
+Each block represents a major section of the UI (e.g. Header, Sidebar, MainPanel, Footer). These blocks will be built in PARALLEL by different AI agents, so their components should be completely disjoint and independent from other blocks.
 
 Children can be nested component objects or plain strings for text.
 
@@ -87,74 +95,110 @@ Children can be nested component objects or plain strings for text.
 User: "a login page"
 {
   "layout": "centered",
-  "components": [
+  "blocks": [
     {
-      "type": "Card",
-      "props": { "title": "🔐 Sign In", "subtitle": "Welcome back — sign in to your account" },
-      "children": [
-        { "type": "Input", "props": { "label": "📧 Email", "placeholder": "you@company.com", "type": "email" } },
-        { "type": "Input", "props": { "label": "🔑 Password", "placeholder": "Enter your password", "type": "password" } },
-        { "type": "Button", "props": { "variant": "primary", "size": "lg" }, "children": ["Sign In →"] },
-        { "type": "Divider", "props": { "label": "or" } },
-        { "type": "Button", "props": { "variant": "outline" }, "children": ["Continue with Google"] }
+      "id": "login-form",
+      "description": "Centered login form card",
+      "components": [
+        {
+          "type": "Card",
+          "props": { "title": "🔐 Sign In", "subtitle": "Welcome back — sign in to your account" },
+          "children": [
+            { "type": "Input", "props": { "label": "📧 Email", "placeholder": "you@company.com", "type": "email" } },
+            { "type": "Input", "props": { "label": "🔑 Password", "placeholder": "Enter your password", "type": "password" } },
+            { "type": "Button", "props": { "variant": "primary", "size": "lg", "fullWidth": true }, "children": ["Sign In →"] },
+            { "type": "Divider", "props": { "label": "or" } },
+            { "type": "Button", "props": { "variant": "outline", "fullWidth": true }, "children": ["Continue with Google"] }
+          ]
+        }
       ]
     }
   ],
-  "reasoning": "Centered layout with a single Card form — perfect for login screens."
+  "reasoning": "Centered layout with a single block containing the Card form — perfect for login screens."
 }
 
 User: "a todo app"
 {
   "layout": "single-column",
-  "components": [
-    { "type": "Navbar", "props": { "brand": "✅ TaskFlow", "items": [], "actions": [{"label": "Sign Out", "variant": "ghost"}] } },
+  "blocks": [
     {
-      "type": "Card",
-      "props": { "title": "📝 My Tasks", "subtitle": "3 tasks remaining today" },
-      "children": [
-        { "type": "Input", "props": { "label": "", "placeholder": "Add a new task and press Enter..." } },
-        { "type": "Divider", "props": {} },
-        { "type": "Table", "props": {
-          "columns": [{"key":"task","header":"Task"},{"key":"priority","header":"Priority"},{"key":"due","header":"Due"},{"key":"status","header":"Status"}],
-          "data": [
-            {"task":"Finish project proposal","priority":"🔴 High","due":"Today","status":"In Progress"},
-            {"task":"Review pull requests","priority":"🟡 Medium","due":"Tomorrow","status":"Pending"},
-            {"task":"Update documentation","priority":"🟢 Low","due":"Fri","status":"Pending"},
-            {"task":"Deploy to production","priority":"🔴 High","due":"Today","status":"Done"},
-            {"task":"Team standup meeting","priority":"🟡 Medium","due":"Daily","status":"Done"}
-          ],
-          "striped": true
-        }}
+      "id": "todo-nav",
+      "description": "Top navigation bar for the Todo app",
+      "components": [
+        { "type": "Navbar", "props": { "brand": "✅ TaskFlow", "items": [], "actions": [{"label": "Sign Out", "variant": "ghost"}] } }
+      ]
+    },
+    {
+      "id": "todo-main",
+      "description": "Main task list card with input and tasks table",
+      "components": [
+        {
+          "type": "Card",
+          "props": { "title": "📝 My Tasks", "subtitle": "3 tasks remaining today" },
+          "children": [
+            { "type": "Input", "props": { "label": "", "placeholder": "Add a new task and press Enter..." } },
+            { "type": "Divider", "props": {} },
+            { "type": "Table", "props": {
+              "columns": [{"key":"task","header":"Task"},{"key":"priority","header":"Priority"},{"key":"due","header":"Due"},{"key":"status","header":"Status"}],
+              "data": [
+                {"task":"Finish project proposal","priority":"🔴 High","due":"Today","status":"In Progress"},
+                {"task":"Review pull requests","priority":"🟡 Medium","due":"Tomorrow","status":"Pending"},
+                {"task":"Update documentation","priority":"🟢 Low","due":"Fri","status":"Pending"},
+                {"task":"Deploy to production","priority":"🔴 High","due":"Today","status":"Done"},
+                {"task":"Team standup meeting","priority":"🟡 Medium","due":"Daily","status":"Done"}
+              ],
+              "striped": true
+            }}
+          ]
+        }
       ]
     }
   ],
-  "reasoning": "Single-column layout with a Navbar, task input, and table for a clean todo app."
+  "reasoning": "Single-column layout with a Navbar block and a main task list block."
 }
 
 User: "analytics dashboard for e-commerce"
 {
   "layout": "dashboard",
-  "components": [
-    { "type": "Navbar", "props": { "brand": "🛒 ShopMetrics", "items": [{"label":"Overview","href":"#"},{"label":"Orders","href":"#"},{"label":"Customers","href":"#"}], "actions": [{"label":"📊 Export","variant":"secondary"}] } },
-    { "type": "Stat", "props": { "label": "Total Revenue", "value": "$48,295", "trend": "+18.2%", "icon": "💰", "subtitle": "vs last month" } },
-    { "type": "Stat", "props": { "label": "Orders", "value": "1,284", "trend": "+9.4%", "icon": "📦", "subtitle": "this month" } },
-    { "type": "Stat", "props": { "label": "Avg Order Value", "value": "$37.60", "trend": "+4.1%", "icon": "🧾", "subtitle": "per order" } },
-    { "type": "Card", "props": { "title": "📈 Revenue Trend", "subtitle": "Last 6 months" }, "children": [
-      { "type": "Chart", "props": { "type": "line", "title": "Monthly Revenue", "height": 260, "data": [
-        {"label":"Aug","value":32000},{"label":"Sep","value":38000},{"label":"Oct","value":41000},{"label":"Nov","value":36000},{"label":"Dec","value":52000},{"label":"Jan","value":48295}
-      ]}}
-    ]},
-    { "type": "Card", "props": { "title": "🏆 Top Products", "subtitle": "Best sellers this month" }, "children": [
-      { "type": "Table", "props": { "columns": [{"key":"product","header":"Product"},{"key":"units","header":"Units"},{"key":"revenue","header":"Revenue"},{"key":"status","header":"Status"}], "striped": true, "data": [
-        {"product":"AirPods Pro","units":"428","revenue":"$42,800","status":"In Stock"},
-        {"product":"iPhone Case","units":"389","revenue":"$11,670","status":"In Stock"},
-        {"product":"USB-C Hub","units":"312","revenue":"$15,600","status":"Low Stock"},
-        {"product":"MagSafe Wallet","units":"287","revenue":"$11,480","status":"In Stock"},
-        {"product":"Smart Watch Band","units":"201","revenue":"$6,030","status":"Out of Stock"}
-      ]}}
-    ]}
+  "blocks": [
+    {
+      "id": "dash-nav",
+      "description": "Top navbar with shop branding and export action",
+      "components": [
+        { "type": "Navbar", "props": { "brand": "🛒 ShopMetrics", "items": [{"label":"Overview","href":"#"},{"label":"Orders","href":"#"},{"label":"Customers","href":"#"}], "actions": [{"label":"📊 Export","variant":"secondary"}] } }
+      ]
+    },
+    {
+      "id": "dash-stats",
+      "description": "Top row of key metric stat cards",
+      "components": [
+        { "type": "Stat", "props": { "label": "Total Revenue", "value": "$48,295", "trend": "+18.2%", "icon": "💰", "subtitle": "vs last month" } },
+        { "type": "Stat", "props": { "label": "Orders", "value": "1,284", "trend": "+9.4%", "icon": "📦", "subtitle": "this month" } },
+        { "type": "Stat", "props": { "label": "Avg Order Value", "value": "$37.60", "trend": "+4.1%", "icon": "🧾", "subtitle": "per order" } }
+      ]
+    },
+    {
+      "id": "dash-charts",
+      "description": "Revenue trend and top products block",
+      "components": [
+        { "type": "Card", "props": { "title": "📈 Revenue Trend", "subtitle": "Last 6 months" }, "children": [
+          { "type": "Chart", "props": { "type": "line", "title": "Monthly Revenue", "height": 260, "data": [
+            {"label":"Aug","value":32000},{"label":"Sep","value":38000},{"label":"Oct","value":41000},{"label":"Nov","value":36000},{"label":"Dec","value":52000},{"label":"Jan","value":48295}
+          ]}}
+        ]},
+        { "type": "Card", "props": { "title": "🏆 Top Products", "subtitle": "Best sellers this month" }, "children": [
+          { "type": "Table", "props": { "columns": [{"key":"product","header":"Product"},{"key":"units","header":"Units"},{"key":"revenue","header":"Revenue"},{"key":"status","header":"Status"}], "striped": true, "data": [
+            {"product":"AirPods Pro","units":"428","revenue":"$42,800","status":"In Stock"},
+            {"product":"iPhone Case","units":"389","revenue":"$11,670","status":"In Stock"},
+            {"product":"USB-C Hub","units":"312","revenue":"$15,600","status":"Low Stock"},
+            {"product":"MagSafe Wallet","units":"287","revenue":"$11,480","status":"In Stock"},
+            {"product":"Smart Watch Band","units":"201","revenue":"$6,030","status":"Out of Stock"}
+          ]}}
+        ]}
+      ]
+    }
   ],
-  "reasoning": "Dashboard layout with Navbar, 3 Stat cards, a line chart, and a top-products table."
+  "reasoning": "Dashboard layout with grouped blocks for navigation, stats grid, and charts."
 }`;
 
 // ---- PLANNER FUNCTION ----
@@ -178,8 +222,8 @@ Create the best component plan to build exactly what they asked for.
   try {
     const plan: PlannerOutput = JSON.parse(cleanResponse);
 
-    if (!plan.layout || !plan.components || !Array.isArray(plan.components)) {
-      throw new Error('Invalid plan structure: missing layout or components');
+    if (!plan.layout || !plan.blocks || !Array.isArray(plan.blocks)) {
+      throw new Error('Invalid plan structure: missing layout or blocks array');
     }
 
     const validLayouts = ['single-column', 'two-column', 'sidebar-layout', 'dashboard', 'centered', 'full-width', 'landing-page', 'form-page', 'app-shell'];
@@ -199,12 +243,18 @@ Create the best component plan to build exactly what they asked for.
     // Fallback plan
     return {
       layout: 'single-column',
-      components: [
+      blocks: [
         {
-          type: 'Card',
-          props: { title: '⚠️ Generation Failed', subtitle: 'Could not parse the plan — try a different prompt' },
-          children: [{ type: 'Button', props: { variant: 'primary' }, children: ['Try Again'] }],
-        },
+          id: 'error-block',
+          description: 'Error fallback block',
+          components: [
+            {
+              type: 'Card',
+              props: { title: '⚠️ Generation Failed', subtitle: 'Could not parse the plan — try a different prompt' },
+              children: [{ type: 'Button', props: { variant: 'primary' }, children: ['Try Again'] }],
+            },
+          ]
+        }
       ],
       reasoning: 'Fallback: JSON parse error from planner response.',
     };

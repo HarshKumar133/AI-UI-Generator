@@ -49,10 +49,17 @@ export interface ComponentNode {
   children?: (ComponentNode | string)[];
 }
 
+// Represents a distinct block/section of the UI to be generated in parallel
+export interface PlannerBlock {
+  id: string; // e.g. "sidebar", "header", "main-content"
+  description: string; // e.g. "Left navigation sidebar with settings and user profile"
+  components: ComponentNode[]; // Components required for THIS specific block
+}
+
 // Output of the Planner agent
 export interface PlannerOutput {
   layout: 'single-column' | 'two-column' | 'sidebar-layout' | 'dashboard' | 'centered' | 'full-width';
-  components: ComponentNode[];
+  blocks: PlannerBlock[]; // NEW: UI broken down into independent blocks
   reasoning: string;
 }
 
@@ -125,4 +132,31 @@ export interface ValidationResult {
   isValid: boolean;
   errors: string[];
   warnings: string[];
-}   
+}
+
+// SSE Event types for streaming progress to the client
+export type GenerationEventType =
+  | 'planner_start'
+  | 'planner_done'
+  | 'agent_start'
+  | 'agent_done'
+  | 'agent_error'
+  | 'explainer_start'
+  | 'explainer_done'
+  | 'complete'
+  | 'error';
+
+export interface GenerationEvent {
+  type: GenerationEventType;
+  agentId?: string; // id of the block or agent executing (e.g., "sidebar")
+  agentName?: string; // human readable name (e.g., "Sidebar Agent")
+  message: string;
+  data?: any; // Partial data payload (e.g., the block plan, or the final result)
+}
+
+export interface AgentEventState {
+  id: string;
+  name: string;
+  status: 'working' | 'done' | 'error';
+  message: string;
+}

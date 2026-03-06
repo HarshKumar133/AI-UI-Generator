@@ -4,7 +4,7 @@
 // Uses allowed components + HTML layout tags
 // ============================================
 
-import { PlannerOutput, GeneratorOutput, ComponentType } from '@/types';
+import { PlannerOutput, GeneratorOutput, ComponentType, PlannerBlock, GenerationEvent } from '@/types';
 import { callGemini } from './geminiClient';
 import { getComponentDescriptions } from '../validation';
 
@@ -175,42 +175,94 @@ Return ONLY valid TSX code.
 Start with: 'use client';
 No markdown fences. No extra explanation. Just code.`;
 
-// ---- GENERATOR FUNCTION ----
+// ---- SYSTEM PROMPT FOR INDIVIDUAL BLOCKS ----
 
-export async function runGenerator(plan: PlannerOutput): Promise<GeneratorOutput> {
-  const userMessage = `Convert this plan into a STUNNING, PREMIUM React TSX component.
+const BLOCK_GENERATOR_SYSTEM_PROMPT = `You are a UI BLOCK GENERATOR agent. Your job is to strictly build ONE piece of a larger UI.
 
-PLAN:
-${JSON.stringify(plan, null, 2)}
+MISSION: Generate a STUNNING, PREMIUM, PRODUCTION-QUALITY React TSX component block.
+
+════════════════════════
+STRICT IMPORT RULES
+════════════════════════
+- Import components ONLY from '@/components/ui':
+  Button, Card, Input, Table, Modal, Sidebar, Navbar, Chart, Badge, Avatar, Progress, Stat, Alert, Toggle, Tabs, Divider, Select
+- React hooks (useState, useCallback, useRef) from 'react' are allowed
+- NO external libraries whatsoever
+- Component name MUST match the provided Block ID in PascalCase (e.g. "SidebarBlock")
+- Must export default
+
+${getComponentDescriptions()}
+
+════════════════════════
+PREMIUM DESIGN MANDATES
+════════════════════════
+1. GLASSMORPHISM CARDS:
+   style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 24, backdropFilter: 'blur(12px)' }}
+2. HOVER MICRO-ANIMATIONS for cards/rows.
+3. DENSE REAL DATA: No placeholders. Real terminology.
+4. EMOJI ICONS: Use emojis for visual flair.
+
+OUTPUT FORMAT:
+Return ONLY valid TSX valid.
+Do NOT start with 'use client';! Just output the function.
+No markdown fences. No extra text. Just code.`;
+
+// ---- SYSTEM PROMPT FOR SHELL (LAYOUT) ----
+const SHELL_GENERATOR_SYSTEM_PROMPT = `You are the SHELL GENERATOR agent. Your job is to arrange and layout a set of existing React component blocks into a stunning page.
+
+MISSION: Create the master layout shell that stitches the blocks together seamlessly.
+
+════════════════════════
+STRICT IMPORT RULES
+════════════════════════
+- First line MUST be: 'use client';
+- Import components ONLY from '@/components/ui' IF NEEDED for layout scaffolding (rare).
+- The blocks will be injected into this file during build time, so ASSUME they exist and just call them by their PascalCase names (e.g., <SidebarBlock />, <NavbarBlock />).
+- Component name: GeneratedUI, default export
+
+════════════════════════
+PREMIUM DESIGN MANDATES
+════════════════════════
+1. AMBIENT BACKGROUND on the root div:
+   style={{ minHeight: '100vh', background: 'radial-gradient(ellipse at 15% 10%, rgba(16,185,129,0.09) 0%, transparent 45%), radial-gradient(ellipse at 85% 80%, rgba(59,130,246,0.07) 0%, transparent 40%), #09090b', color: '#eceff2', display: 'flex' }}
+2. GRADIENT TEXT for any page headers you create.
+3. Handle flex/grid alignments properly so sidebars stick and main content areas scroll.
+
+OUTPUT FORMAT:
+Return ONLY valid TSX valid.
+Start with: 'use client';
+No markdown fences. Just code.`;
+
+// ---- GENERATOR FUNCTIONS ----
+
+export async function runBlockGenerator(block: PlannerBlock, layout: string, onEvent?: (e: GenerationEvent) => void): Promise<{ code: string; components: ComponentType[] }> {
+  if (onEvent) onEvent({ type: 'agent_start', agentId: block.id, agentName: `Block: ${block.id}`, message: `Starting generation for ${block.id}...` });
+
+  const pascalName = block.id.split('-').map(part => part.charAt(0).toUpperCase() + part.slice(1)).join('') + 'Block';
+
+  const userMessage = `Build this specific block: ${pascalName}
+
+DESCRIPTION: ${block.description}
+
+COMPONENTS TO USE (Must use all):
+${JSON.stringify(block.components, null, 2)}
 
 REQUIREMENTS:
-1. Component name: GeneratedUI (default export)
-2. First line: 'use client';
-3. Layout type: "${plan.layout}" — see system prompt for exact layout guidance
-4. Apply ALL the premium design mandates: gradient text, ambient bg, glassmorphism, hover animations
-5. Use DENSE, REALISTIC data (actual numbers, real names, real dates)
-6. Every component from the plan must be used: ${plan.components.map(c => c.type).filter((v, i, a) => a.indexOf(v) === i).join(', ')}
+1. Component name MUST be: ${pascalName} (default export)
+2. Use DENSE, REALISTIC data matching the description.
+3. Apply premium design mandates.
+4. Return ONLY React TSX code. NO 'use client' header. No markdown.`;
 
-${getLayoutGuidance(plan.layout)}
+  const response = await callGemini(userMessage, BLOCK_GENERATOR_SYSTEM_PROMPT);
 
-Return ONLY TSX code. No markdown, no explanation.`;
-
-  const response = await callGemini(userMessage, GENERATOR_SYSTEM_PROMPT);
-
-  // Clean the response
   let code = response.trim();
   if (code.startsWith('`')) {
     code = code.replace(/^`{3}(?:tsx?|jsx?|typescript|javascript)?\s*\n?/, '').replace(/\n?`{3}\s*$/, '');
   }
 
-  // Ensure 'use client' at top
-  if (!code.startsWith("'use client'") && !code.startsWith('"use client"')) {
-    code = `'use client';\n${code}`;
-  }
-
-  // Ensure React import
+  // Ensure React import exists
   if (!code.includes("from 'react'") && !code.includes('from "react"')) {
-    code = code.replace("'use client';\n", "'use client';\nimport React from 'react';\n");
+    code = `import React from 'react';\n${code}`;
   }
 
   // Ensure UI import exists
@@ -218,21 +270,97 @@ Return ONLY TSX code. No markdown, no explanation.`;
     const usedComponents = extractUsedComponents(code);
     if (usedComponents.length > 0) {
       const importLine = `import { ${usedComponents.join(', ')} } from '@/components/ui';\n`;
-      const firstNewline = code.indexOf('\n');
-      code = code.slice(0, firstNewline + 1) + importLine + code.slice(firstNewline + 1);
+      code = importLine + code;
     }
   }
 
-  // Ensure default export
-  if (!code.includes('export default')) {
-    code = code.replace(/^(export )?function GeneratedUI/m, 'export default function GeneratedUI');
-    if (!code.includes('export default')) {
-      code += '\nexport default GeneratedUI;';
-    }
+  if (onEvent) onEvent({ type: 'agent_done', agentId: block.id, agentName: `Block: ${block.id}`, message: `Finished ${block.id} generation` });
+
+  return { code, components: extractUsedComponents(code) };
+}
+
+export async function runShellGenerator(plan: PlannerOutput, blockNames: string[], onEvent?: (e: GenerationEvent) => void): Promise<string> {
+  if (onEvent) onEvent({ type: 'agent_start', agentId: 'shell', agentName: 'Layout Shell', message: 'Stitching blocks together...' });
+
+  const userMessage = `Create the master GeneratedUI layout shell.
+
+PAGE LAYOUT TYPE: "${plan.layout}"
+REASONING: ${plan.reasoning}
+
+AVAILABLE BLOCKS TO RENDER:
+${blockNames.join(', ')}
+
+REQUIREMENTS:
+1. First line: 'use client';
+2. Component Name: GeneratedUI (default export)
+3. Arrange all the available blocks properly using flex/grid.
+4. Apply the ambient background to the root container.
+5. Render ALL available blocks exactly as named (e.g. <SidebarBlock />). 
+6. Return ONLY React TSX code. No markdown fences.
+${getLayoutGuidance(plan.layout)}`;
+
+  const response = await callGemini(userMessage, SHELL_GENERATOR_SYSTEM_PROMPT);
+
+  let code = response.trim();
+  if (code.startsWith('`')) {
+    code = code.replace(/^`{3}(?:tsx?|jsx?|typescript|javascript)?\s*\n?/, '').replace(/\n?`{3}\s*$/, '');
   }
 
-  const componentList = extractUsedComponents(code);
-  return { code, componentList };
+  if (!code.startsWith("'use client'") && !code.startsWith('"use client"')) {
+    code = `'use client';\n${code}`;
+  }
+
+  if (onEvent) onEvent({ type: 'agent_done', agentId: 'shell', agentName: 'Layout Shell', message: 'Finished laying out the shell' });
+
+  return code;
+}
+
+export async function runGenerator(plan: PlannerOutput, onEvent?: (e: GenerationEvent) => void): Promise<GeneratorOutput> {
+  // Fallback for non-streaming usage (uses standard linear pipeline backwards compatibility if needed)
+  if (!plan.blocks || plan.blocks.length === 0) {
+    throw new Error("Plan has no blocks");
+  }
+
+  const blockResults = await Promise.all(
+    plan.blocks.map(block => runBlockGenerator(block, plan.layout, onEvent))
+  );
+
+  const blockNames = plan.blocks.map(b => b.id.split('-').map(part => part.charAt(0).toUpperCase() + part.slice(1)).join('') + 'Block');
+  const shellCode = await runShellGenerator(plan, blockNames, onEvent);
+
+  // Stitch them together
+  let finalCode = shellCode;
+
+  // Collect all unique component imports needed across all blocks and shell
+  const allUsedComponents = new Set<ComponentType>();
+  extractUsedComponents(shellCode).forEach(c => allUsedComponents.add(c));
+
+  const blockCodes = blockResults.map((r, i) => {
+    r.components.forEach(c => allUsedComponents.add(c));
+    // Remove individual imports from blocks
+    let cleanBlock = r.code
+      .replace(/import {[^}]+} from ['"]@\/components\/ui['"];?\n?/g, '')
+      .replace(/import React[^;]+;?\n?/g, '');
+    return `// --- Block: ${blockNames[i]} ---\n${cleanBlock}`;
+  });
+
+  // Inject central imports at the top
+  const importLine = allUsedComponents.size > 0
+    ? `\nimport { ${Array.from(allUsedComponents).join(', ')} } from '@/components/ui';\n`
+    : '';
+
+  // Replace shell's UI imports with unified ones, then append the blocks above the default export
+  finalCode = finalCode.replace(/import {[^}]+} from ['"]@\/components\/ui['"];?\n?/g, '');
+  finalCode = finalCode.replace(/'use client';\n?/, `'use client';\nimport React from 'react';${importLine}`);
+
+  const exportMatch = finalCode.match(/export default function GeneratedUI/);
+  if (exportMatch && exportMatch.index !== undefined) {
+    finalCode = finalCode.slice(0, exportMatch.index) + '\n\n' + blockCodes.join('\n\n') + '\n\n' + finalCode.slice(exportMatch.index);
+  } else {
+    finalCode += '\n\n' + blockCodes.join('\n\n');
+  }
+
+  return { code: finalCode, componentList: Array.from(allUsedComponents) };
 }
 
 // ---- HELPER: Layout guidance ----
@@ -257,7 +385,7 @@ function getLayoutGuidance(layout: string): string {
 function extractUsedComponents(code: string): ComponentType[] {
   const used: ComponentType[] = [];
   for (const comp of ALL_COMPONENTS) {
-    const regex = new RegExp(`<${comp}[\\s/>{]`, 'g');
+    const regex = new RegExp("<" + comp + "[\\\\s/>{]", "g");
     if (regex.test(code)) {
       used.push(comp);
     }

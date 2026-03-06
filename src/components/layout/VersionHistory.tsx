@@ -77,10 +77,10 @@ export const VersionHistory: React.FC<VersionHistoryProps> = ({
                         <span>{formatTime(version.timestamp)}</span>
                         <span>•</span>
                         <span>{version.plan.layout}</span>
-                        {version.plan.components.length > 0 && (
+                        {version.plan.blocks && version.plan.blocks.length > 0 && (
                           <>
                             <span>•</span>
-                            <span>{version.plan.components.length} components</span>
+                            <span>{version.plan.blocks.length} blocks</span>
                           </>
                         )}
                       </div>

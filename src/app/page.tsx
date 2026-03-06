@@ -6,7 +6,7 @@ import { ChatPanel } from '@/components/layout/ChatPanel';
 import { CodePanel } from '@/components/layout/CodePanel';
 import { VersionHistory } from '@/components/layout/VersionHistory';
 import { PreviewPanel } from '@/components/preview/PreviewPanel';
-import { ChatMessage, GenerationResult, ComponentNode, ComponentType, VersionEntry } from '@/types';
+import { ChatMessage, GenerationResult, ComponentNode, ComponentType, VersionEntry, AgentEventState } from '@/types';
 import { Template } from '@/lib/templates';
 import {
   Sparkles,
@@ -52,6 +52,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<ViewTab>('split');
   const [previewError, setPreviewError] = useState<string | undefined>();
   const [currentTitle, setCurrentTitle] = useState('');
+  const [activeAgents, setActiveAgents] = useState<AgentEventState[]>([]);
 
   const versionCounterRef = useRef(0);
 
@@ -75,7 +76,7 @@ export default function Home() {
     setCurrentHtml('');
     setOutputMode('nextjs'); // use Next.js native compilation
     setComponentList(result.generation.componentList);
-    setPreviewComponents(result.plan.components);
+    setPreviewComponents(result.plan.blocks ? result.plan.blocks.flatMap(b => b.components) : []);
     setPreviewLayout(result.plan.layout);
     setCurrentVersion(result.version);
     setPreviewError(undefined);
@@ -171,23 +172,71 @@ export default function Home() {
         } else throw new Error(data.error || 'Modification failed');
       } else {
         // ── COMPONENT/LAYOUT GENERATION MODE ──
+        setActiveAgents([]);
         const response = await fetch('/api/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ prompt: message }),
         });
-        const data = await response.json();
-        if (data.success && data.data) {
-          const result = data.data as GenerationResult;
-          applyGenerationResult(result);
-          const assistantMsg: ChatMessage = { id: `assistant-${Date.now()}`, role: 'assistant', content: result.explanation.explanation, timestamp: new Date().toISOString(), generationResult: result };
-          setMessages(prev => [...prev, assistantMsg]);
-          setActiveTab('preview');
-        } else throw new Error(data.error || 'Generation failed');
+
+        if (!response.body) throw new Error('No response body from server');
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let done = false;
+        let buffer = '';
+
+        while (!done) {
+          const { value, done: readerDone } = await reader.read();
+          done = readerDone;
+          if (value) {
+            buffer += decoder.decode(value, { stream: true });
+            const events = buffer.split('\n\n');
+            buffer = events.pop() || ''; // Keep the incomplete remaining part in buffer
+
+            for (const eventString of events) {
+              if (eventString.startsWith('data: ')) {
+                try {
+                  const event = JSON.parse(eventString.replace('data: ', '').trim());
+
+                  if (event.type.endsWith('_start') || event.type === 'agent_start') {
+                    const id = event.agentId || event.type.replace('_start', '');
+                    const name = event.agentName || (id.charAt(0).toUpperCase() + id.slice(1));
+                    setActiveAgents(prev => {
+                      const exists = prev.find(a => a.id === id);
+                      if (exists) return prev.map(a => a.id === id ? { ...a, status: 'working', message: event.message } : a);
+                      return [...prev, { id, name, status: 'working', message: event.message }];
+                    });
+                  } else if (event.type.endsWith('_done') || event.type === 'agent_done') {
+                    const id = event.agentId || event.type.replace('_done', '');
+                    setActiveAgents(prev => prev.map(a => a.id === id ? { ...a, status: 'done', message: event.message } : a));
+                  } else if (event.type === 'error') {
+                    if (event.agentId) {
+                      setActiveAgents(prev => prev.map(a => a.id === event.agentId ? { ...a, status: 'error', message: event.message } : a));
+                      throw new Error(`Agent ${event.agentId} Error: ${event.message}`);
+                    } else {
+                      throw new Error(event.message);
+                    }
+                  } else if (event.type === 'complete') {
+                    const result = event.data as GenerationResult;
+                    applyGenerationResult(result);
+                    const assistantMsg: ChatMessage = { id: `assistant-${Date.now()}`, role: 'assistant', content: result.explanation.explanation, timestamp: new Date().toISOString(), generationResult: result };
+                    setMessages(prev => [...prev, assistantMsg]);
+                    setActiveAgents([]);
+                    setActiveTab('preview');
+                  }
+                } catch (parseError) {
+                  // Ignore JSON parse errors from chunk fragments if any somehow slip through
+                }
+              }
+            }
+          }
+        }
       }
     } catch (error) {
       const errorMsg: ChatMessage = { id: `error-${Date.now()}`, role: 'assistant', content: `Error: ${error instanceof Error ? error.message : 'Generation failed. Please try again.'}`, timestamp: new Date().toISOString() };
       setMessages(prev => [...prev, errorMsg]);
+      setActiveAgents([]);
     } finally {
       setIsLoading(false);
     }
@@ -199,7 +248,7 @@ export default function Home() {
     setCurrentCode(version.code);
     setCurrentHtml('');
     setOutputMode('tsx');
-    setPreviewComponents(version.plan.components);
+    setPreviewComponents(version.plan.blocks ? version.plan.blocks.flatMap(b => b.components) : []);
     setPreviewLayout(version.plan.layout);
     setCurrentVersion(version.version);
     setPreviewError(undefined);

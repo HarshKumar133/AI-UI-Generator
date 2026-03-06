@@ -13,33 +13,38 @@ import { runGenerator } from './generator';
 import { runExplainer } from './explainer';
 import { runModifier } from './modifier';
 import { validateGeneratedCode, sanitizePrompt } from '../validation';
+import { GenerationEvent } from '@/types';
 
 // ---- GENERATE: Full pipeline for new UI ----
 
 export async function orchestrateGeneration(
   userPrompt: string,
-  currentVersion: number
+  currentVersion: number,
+  onEvent?: (e: GenerationEvent) => void
 ): Promise<GenerationResult> {
   const sanitizedPrompt = sanitizePrompt(userPrompt);
 
+  if (onEvent) onEvent({ type: 'planner_start', message: 'Analyzing request and planning UI blocks...' });
   console.log('[Orchestrator] Step 1: Running Planner...');
   const plan = await runPlanner(sanitizedPrompt);
-  console.log('[Orchestrator] Planner complete. Layout:', plan.layout, 'Components:', plan.components.length);
+  console.log('[Orchestrator] Planner complete. Layout:', plan.layout, 'Blocks:', plan.blocks?.length);
+  if (onEvent) onEvent({ type: 'planner_done', message: `Planned ${plan.blocks?.length || 0} blocks`, data: plan });
 
-  console.log('[Orchestrator] Step 2: Running Generator...');
-  const generation = await runGenerator(plan);
-  console.log('[Orchestrator] Generator complete. Components used:', generation.componentList);
+  console.log('[Orchestrator] Step 2: Running Generator instances in parallel...');
+  const generation = await runGenerator(plan, onEvent);
 
   const validation = validateGeneratedCode(generation.code);
   if (!validation.isValid) {
     console.warn('[Orchestrator] Validation warnings:', validation.errors);
   }
 
+  if (onEvent) onEvent({ type: 'explainer_start', message: 'Generating documentation...' });
   console.log('[Orchestrator] Step 3: Running Explainer...');
   const explanation = await runExplainer(sanitizedPrompt, plan, generation);
   console.log('[Orchestrator] Explainer complete.');
+  if (onEvent) onEvent({ type: 'explainer_done', message: 'Documentation complete' });
 
-  return {
+  const finalResult = {
     plan,
     generation,
     explanation,
@@ -47,6 +52,9 @@ export async function orchestrateGeneration(
     timestamp: new Date().toISOString(),
     userPrompt: sanitizedPrompt,
   };
+
+  if (onEvent) onEvent({ type: 'complete', message: 'Generation complete', data: finalResult });
+  return finalResult;
 }
 
 // ---- MODIFY: Iterative edit pipeline (context-aware) ----
@@ -84,11 +92,17 @@ export async function orchestrateModification(
     console.warn('[Orchestrator] Planner failed for modification preview, using fallback');
     plan = {
       layout: (request.previousLayout || 'single-column') as 'single-column' | 'two-column' | 'sidebar-layout' | 'dashboard' | 'centered' | 'full-width',
-      components: componentList.map(type => ({
-        type,
-        props: {},
-        children: [],
-      })),
+      blocks: [
+        {
+          id: 'modified-content',
+          description: 'Modified UI components',
+          components: componentList.map(type => ({
+            type,
+            props: {},
+            children: [],
+          }))
+        }
+      ],
       reasoning: `Modification: ${changes}`,
     };
   }

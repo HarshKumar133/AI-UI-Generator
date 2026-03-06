@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import styles from '@/styles/components/chatPanel.module.css';
-import { ChatMessage } from '@/types';
+import { ChatMessage, AgentEventState } from '@/types';
 import { TEMPLATES, Template } from '@/lib/templates';
 import {
   MessageSquare,
@@ -39,6 +39,7 @@ interface ChatPanelProps {
   onLoadTemplate?: (template: Template) => void;
   isLoading: boolean;
   hasCode: boolean;
+  activeAgents?: AgentEventState[];
 }
 
 export const ChatPanel: React.FC<ChatPanelProps> = ({
@@ -47,6 +48,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   onLoadTemplate,
   isLoading,
   hasCode,
+  activeAgents = [],
 }) => {
   const [input, setInput] = useState('');
   const [showTemplates, setShowTemplates] = useState(false);
@@ -258,17 +260,39 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                 <span>Generating your UI</span>
                 <span className={styles.loadingDots}><span /><span /><span /></span>
               </div>
-              <div className={styles.loadingSteps}>
-                <div className={`${styles.loadingStep} ${styles.loadingStepActive}`}>
-                  <span className={styles.stepDot} /> Planning layout
+
+              {/* Agent Progress Status */}
+              {activeAgents.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '12px' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Parallel Agents</div>
+                  {activeAgents.map(agent => (
+                    <div key={agent.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem' }}>
+                      {agent.status === 'working' ? (
+                        <div style={{ width: '14px', height: '14px', borderRadius: '50%', border: '2px solid rgba(59,130,246,0.3)', borderTopColor: '#3b82f6', animation: 'spin 1s linear infinite' }} />
+                      ) : agent.status === 'done' ? (
+                        <span style={{ color: '#10b981' }}>✓</span>
+                      ) : (
+                        <span style={{ color: '#ef4444' }}>⚠</span>
+                      )}
+                      <span style={{ fontWeight: 500, color: agent.status === 'done' ? '#9ca3af' : '#e5e7eb' }}>{agent.name}</span>
+                      <span style={{ color: '#6b7280', fontSize: '0.75rem', marginLeft: 'auto', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '120px' }}>{agent.message}</span>
+                    </div>
+                  ))}
+                  <style>{`@keyframes spin { 100% { transform: rotate(360deg); } }`}</style>
                 </div>
-                <div className={styles.loadingStep}>
-                  <span className={styles.stepDot} /> Composing components
+              ) : (
+                <div className={styles.loadingSteps}>
+                  <div className={`${styles.loadingStep} ${styles.loadingStepActive}`}>
+                    <span className={styles.stepDot} /> Planning layout
+                  </div>
+                  <div className={styles.loadingStep}>
+                    <span className={styles.stepDot} /> Composing components
+                  </div>
+                  <div className={styles.loadingStep}>
+                    <span className={styles.stepDot} /> Generating code
+                  </div>
                 </div>
-                <div className={styles.loadingStep}>
-                  <span className={styles.stepDot} /> Generating code
-                </div>
-              </div>
+              )}
             </div>
           </div>
         )}
