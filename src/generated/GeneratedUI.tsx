@@ -1,5 +1,5 @@
-'use client';
 // @ts-nocheck
+'use client';
 import React from 'react';
 import { Navbar, Sidebar, Badge, Avatar, Progress, Card, Button, Input, Divider, Table, Stat } from '@/components/ui';
 

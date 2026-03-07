@@ -38,6 +38,22 @@ export const Navbar: React.FC<NavbarProps> = ({
   const renderActions = () => {
     if (!actions) return null;
 
+    const mapVariant = (
+      variant?: NavAction['variant'],
+    ): React.ComponentProps<typeof Button>['variant'] => {
+      switch (variant) {
+        case 'primary':
+          return 'default';
+        case 'danger':
+          return 'destructive';
+        case 'secondary':
+          return 'secondary';
+        case 'ghost':
+        default:
+          return 'ghost';
+      }
+    };
+
     // Handle array of actions
     if (Array.isArray(actions)) {
       return (
@@ -45,7 +61,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {actions.map((action, idx) => (
             <Button
               key={`action-${idx}`}
-              variant={action.variant || 'primary'}
+              variant={mapVariant(action.variant)}
               size="sm"
               onClick={action.onClick}
             >
@@ -62,7 +78,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     if (typeof actions === 'object' && 'label' in singleAction && !React.isValidElement(actions)) {
       return (
         <Button
-          variant={singleAction.variant || 'primary'}
+          variant={mapVariant(singleAction.variant)}
           size="sm"
           onClick={singleAction.onClick}
         >
