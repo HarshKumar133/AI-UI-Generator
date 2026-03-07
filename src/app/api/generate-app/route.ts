@@ -29,6 +29,9 @@ TECHNICAL RULES
 - All state/logic in vanilla JavaScript — no frameworks
 - Use localStorage for data persistence
 - EVERY button must do something real — no dead UI
+- RESPONSIVENESS: Ensure layouts adapt using Tailwind's sm:, md:, lg: classes so it looks perfect on mobile, tablet, and desktop
+- ACCESSIBILITY: Use semantic HTML elements (<nav>, <main>, <header>, <footer>) and add ARIA attributes (aria-label, role, aria-expanded) where appropriate
+- LOADING STATES: Interactive buttons should simulate loading delays with smooth visual feedback when pressed
 
 ════════════════════════
 MANDATORY DESIGN SYSTEM
@@ -193,6 +196,9 @@ Design requirements:
 - Glassmorphism cards with blur effects
 - Gradient text headings (emerald to white)
 - Smooth hover animations and micro-interactions
+- Fully responsive across mobile, tablet, and desktop (use proper Tailwind flex/grid with md: lg: responsive breakpoints)
+- Accessible with ARIA tags and semantic HTML structure
+- Functional loading states for interactions handling data
 - All interactive elements must be 100% functional
 - Use localStorage to persist any data between page refreshes
 - Every UI element has a clear purpose and works

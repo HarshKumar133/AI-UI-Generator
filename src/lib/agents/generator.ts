@@ -62,7 +62,12 @@ PREMIUM DESIGN MANDATES
    - Subtitles: fontSize '1.1rem', color '#a0aab4', lineHeight 1.65
    - Labels: fontSize '0.72rem', fontWeight 700, letterSpacing '0.06em', textTransform 'uppercase', color '#6b7280'
 
-7. EMOJI ICONS — Use emoji liberally: section headers, nav items, stat icons, feature titles
+7. ACCESSIBILITY & RESPONSIVENESS:
+   - Add descriptive 'aria-label' to icon-only buttons and elements without visible text.
+   - Ensure layout structural components use semantic roles.
+   - Add inline media queries if necessary or flexbox folding for mobile layouts.
+
+8. EMOJI ICONS — Use emoji liberally: section headers, nav items, stat icons, feature titles
 
 ════════════════════════
 COMPLETE PREMIUM EXAMPLE — Analytics Dashboard
@@ -201,6 +206,7 @@ PREMIUM DESIGN MANDATES
 2. HOVER MICRO-ANIMATIONS for cards/rows.
 3. DENSE REAL DATA: No placeholders. Real terminology.
 4. EMOJI ICONS: Use emojis for visual flair.
+5. RESPONSIVENESS & ACCESSIBILITY: Build flex/grid layouts that wrap cleanly on small screens. Ensure proper ARIA labeling on actionable elements.
 
 OUTPUT FORMAT:
 Return ONLY valid TSX valid.
@@ -339,8 +345,8 @@ export async function runGenerator(plan: PlannerOutput, onEvent?: (e: Generation
     r.components.forEach(c => allUsedComponents.add(c));
     // Remove individual imports from blocks as well as 'use client'
     let cleanBlock = r.code
-      .replace(/'use client';?\n?/g, '')
-      .replace(/"use client";?\n?/g, '')
+      .replace(/['"`]?use client['"`]?;?\n?/ig, '')
+      .replace(/export default [A-Za-z0-9_]+;?\n?/g, '')
       .replace(/import {[^}]+} from ['"]@\/components\/ui['"];?\n?/g, '')
       .replace(/import React[^;]+;?\n?/g, '');
     return `// --- Block: ${blockNames[i]} ---\n${cleanBlock}`;
@@ -355,10 +361,9 @@ export async function runGenerator(plan: PlannerOutput, onEvent?: (e: Generation
   finalCode = finalCode.replace(/import {[^}]+} from ['"]@\/components\/ui['"];?\n?/g, '');
 
   // Strip any existing 'use client' to prevent duplicates, then prepend cleanly
-  finalCode = finalCode.replace(/'use client';?\n?/g, '');
-  finalCode = finalCode.replace(/"use client";?\n?/g, '');
+  finalCode = finalCode.replace(/['"`]?use client['"`]?;?\n?/ig, '');
   // Also remove redundant React imports from the shell
-  finalCode = finalCode.replace(/import React[^;]+;?\n?/g, '');
+  finalCode = finalCode.replace(/import React[^;]*;?\n?/g, '');
 
   finalCode = `'use client';\nimport React from 'react';\n${importLine}\n${finalCode.trim()}`;
 

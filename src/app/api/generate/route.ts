@@ -3,6 +3,8 @@ import { orchestrateGeneration } from '@/lib/agents';
 import { GenerateRequest, ApiResponse, GenerationResult } from '@/types';
 import { getVersionHistory, addVersion } from '@/lib/store';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
     try {
         const body: GenerateRequest = await request.json();
