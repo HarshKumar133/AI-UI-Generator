@@ -1,36 +1,59 @@
-import React from 'react';
+import * as React from "react";
+import { cva, type VariantProps } from "class-variance-authority";
 
-export interface AlertProps {
-    children: React.ReactNode;
-    variant?: 'info' | 'success' | 'warning' | 'error';
-    title?: string;
-    dismissible?: boolean;
-}
+import { cn } from "@/lib/utils";
 
-const variantConfig: Record<string, { bg: string; border: string; color: string; icon: string }> = {
-    info: { bg: 'rgba(59,130,246,0.08)', border: 'rgba(59,130,246,0.15)', color: '#60a5fa', icon: 'ℹ️' },
-    success: { bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.15)', color: '#34d399', icon: '✓' },
-    warning: { bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.15)', color: '#fbbf24', icon: '⚠' },
-    error: { bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.15)', color: '#f87171', icon: '✕' },
-};
+const alertVariants = cva(
+  "relative w-full rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-foreground",
+  {
+    variants: {
+      variant: {
+        default: "bg-background text-foreground",
+        destructive:
+          "border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+    },
+  },
+);
 
-export const Alert: React.FC<AlertProps> = ({ children, variant = 'info', title }) => {
-    const cfg = variantConfig[variant];
-    return (
-        <div style={{
-            padding: '14px 18px', borderRadius: 14,
-            background: cfg.bg, border: `1px solid ${cfg.border}`,
-            display: 'flex', gap: 12, alignItems: 'flex-start',
-        }}>
-            <span style={{
-                width: 24, height: 24, borderRadius: '50%', display: 'flex',
-                alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem',
-                fontWeight: 700, backgroundColor: `${cfg.color}20`, color: cfg.color, flexShrink: 0,
-            }}>{cfg.icon}</span>
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {title && <div style={{ fontWeight: 600, fontSize: '0.85rem', color: cfg.color }}>{title}</div>}
-                <div style={{ fontSize: '0.8rem', color: '#c8d0d9', lineHeight: 1.5 }}>{children}</div>
-            </div>
-        </div>
-    );
-};
+const Alert = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement> & VariantProps<typeof alertVariants>
+>(({ className, variant, ...props }, ref) => (
+  <div
+    ref={ref}
+    role="alert"
+    className={cn(alertVariants({ variant }), className)}
+    {...props}
+  />
+));
+Alert.displayName = "Alert";
+
+const AlertTitle = React.forwardRef<
+  HTMLParagraphElement,
+  React.HTMLAttributes<HTMLHeadingElement>
+>(({ className, ...props }, ref) => (
+  <h5
+    ref={ref}
+    className={cn("mb-1 font-medium leading-none tracking-tight", className)}
+    {...props}
+  />
+));
+AlertTitle.displayName = "AlertTitle";
+
+const AlertDescription = React.forwardRef<
+  HTMLParagraphElement,
+  React.HTMLAttributes<HTMLParagraphElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn("text-sm [&_p]:leading-relaxed", className)}
+    {...props}
+  />
+));
+AlertDescription.displayName = "AlertDescription";
+
+export { Alert, AlertTitle, AlertDescription };

@@ -1,54 +1,48 @@
-import React from 'react';
+import * as React from "react";
+import * as AvatarPrimitive from "@radix-ui/react-avatar";
 
-export interface AvatarProps {
-    name: string;
-    src?: string;
-    size?: 'sm' | 'md' | 'lg';
-    status?: 'online' | 'offline' | 'busy' | 'away';
-}
+import { cn } from "@/lib/utils";
 
-const sizeMap = { sm: 28, md: 36, lg: 48 };
-const fontMap = { sm: '0.65rem', md: '0.8rem', lg: '1rem' };
-const statusColors = { online: '#10b981', offline: '#6b7280', busy: '#ef4444', away: '#f59e0b' };
+const Avatar = React.forwardRef<
+  React.ElementRef<typeof AvatarPrimitive.Root>,
+  React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Root>
+>(({ className, ...props }, ref) => (
+  <AvatarPrimitive.Root
+    ref={ref}
+    className={cn(
+      "relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full",
+      className,
+    )}
+    {...props}
+  />
+));
+Avatar.displayName = AvatarPrimitive.Root.displayName;
 
-function getInitials(name: string) {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-}
+const AvatarImage = React.forwardRef<
+  React.ElementRef<typeof AvatarPrimitive.Image>,
+  React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Image>
+>(({ className, ...props }, ref) => (
+  <AvatarPrimitive.Image
+    ref={ref}
+    className={cn("aspect-square h-full w-full", className)}
+    {...props}
+  />
+));
+AvatarImage.displayName = AvatarPrimitive.Image.displayName;
 
-function hashColor(name: string) {
-    let hash = 0;
-    for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-    const colors = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899'];
-    return colors[Math.abs(hash) % colors.length];
-}
+const AvatarFallback = React.forwardRef<
+  React.ElementRef<typeof AvatarPrimitive.Fallback>,
+  React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Fallback>
+>(({ className, ...props }, ref) => (
+  <AvatarPrimitive.Fallback
+    ref={ref}
+    className={cn(
+      "flex h-full w-full items-center justify-center rounded-full bg-muted",
+      className,
+    )}
+    {...props}
+  />
+));
+AvatarFallback.displayName = AvatarPrimitive.Fallback.displayName;
 
-export const Avatar: React.FC<AvatarProps> = ({ name, src, size = 'md', status }) => {
-    const dim = sizeMap[size];
-    return (
-        <div style={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
-            {src ? (
-                <img src={src} alt={name} style={{
-                    width: dim, height: dim, borderRadius: '50%', objectFit: 'cover',
-                    border: '2px solid rgba(255,255,255,0.06)',
-                }} />
-            ) : (
-                <div style={{
-                    width: dim, height: dim, borderRadius: '50%',
-                    background: hashColor(name), display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: fontMap[size], fontWeight: 700, color: 'white', letterSpacing: '0.02em',
-                    border: '2px solid rgba(255,255,255,0.06)',
-                }}>
-                    {getInitials(name)}
-                </div>
-            )}
-            {status && (
-                <span style={{
-                    position: 'absolute', bottom: -1, right: -1,
-                    width: dim * 0.3, height: dim * 0.3, borderRadius: '50%',
-                    backgroundColor: statusColors[status],
-                    border: '2px solid #09090b',
-                }} />
-            )}
-        </div>
-    );
-};
+export { Avatar, AvatarImage, AvatarFallback };

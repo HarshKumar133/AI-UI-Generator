@@ -1,85 +1,22 @@
-import React from 'react';
-import styles from '@/styles/components/input.module.css';
+import * as React from "react";
 
-export interface InputProps {
-  label?: string;
-  placeholder?: string;
-  value?: string;
-  onChange?: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
-  type?: 'text' | 'email' | 'password' | 'number' | 'search' | 'url';
-  disabled?: boolean;
-  required?: boolean;
-  error?: string;
-  helperText?: string;
-  size?: 'sm' | 'md' | 'lg';
-  multiline?: boolean;
-  rows?: number;
-  fullWidth?: boolean;
-  style?: React.CSSProperties;
-  readOnly?: boolean;
-  onKeyDown?: (event: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
-}
+import { cn } from "@/lib/utils";
 
-export const Input: React.FC<InputProps> = ({
-  label,
-  placeholder,
-  value,
-  onChange,
-  type = 'text',
-  disabled = false,
-  required = false,
-  error,
-  helperText,
-  size = 'md',
-  multiline = false,
-  rows = 3,
-  fullWidth = false,
-  style,
-  readOnly = false,
-  onKeyDown,
-}) => {
-  const inputClass = `${styles.input} ${error ? styles.errorInput : ''} ${multiline ? styles.textarea : ''}`;
-
-  return (
-    <div
-      className={`${styles.inputWrapper} ${styles[size]}`}
-      style={{ ...(fullWidth ? { width: '100%' } : {}), ...style }}
-    >
-      {label && (
-        <label className={styles.label}>
-          {label}
-          {required && <span className={styles.required}>*</span>}
-        </label>
-      )}
-      <div className={styles.inputContainer}>
-        {multiline ? (
-          <textarea
-            className={inputClass}
-            placeholder={placeholder}
-            value={value}
-            onChange={(e) => onChange?.(e)}
-            disabled={disabled}
-            required={required}
-            rows={rows}
-            readOnly={readOnly}
-            onKeyDown={onKeyDown}
-          />
-        ) : (
-          <input
-            type={type}
-            className={inputClass}
-            placeholder={placeholder}
-            value={value}
-            onChange={(e) => onChange?.(e)}
-            disabled={disabled}
-            required={required}
-            readOnly={readOnly}
-            onKeyDown={onKeyDown}
-          />
+const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
+  ({ className, type, ...props }, ref) => {
+    return (
+      <input
+        type={type}
+        className={cn(
+          "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
+          className,
         )}
-      </div>
-      {error && <span className={styles.errorText}>{error}</span>}
-      {helperText && !error && <span className={styles.helperText}>{helperText}</span>}
-    </div>
-  );
-};
+        ref={ref}
+        {...props}
+      />
+    );
+  },
+);
+Input.displayName = "Input";
+
+export { Input };

@@ -365,7 +365,7 @@ export async function runGenerator(plan: PlannerOutput, onEvent?: (e: Generation
   // Also remove redundant React imports from the shell
   finalCode = finalCode.replace(/import React[^;]*;?\n?/g, '');
 
-  finalCode = `'use client';\nimport React from 'react';\n${importLine}\n${finalCode.trim()}`;
+  finalCode = `'use client';\n// @ts-nocheck\nimport React from 'react';\n${importLine}\n${finalCode.trim()}`;
 
   const exportMatch = finalCode.match(/export default function GeneratedUI/);
   if (exportMatch && exportMatch.index !== undefined) {

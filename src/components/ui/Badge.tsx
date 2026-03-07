@@ -1,38 +1,37 @@
-import React from 'react';
+import * as React from "react";
+import { cva, type VariantProps } from "class-variance-authority";
 
-export interface BadgeProps {
-    children: React.ReactNode;
-    variant?: 'default' | 'success' | 'warning' | 'error' | 'info';
-    size?: 'sm' | 'md';
-    dot?: boolean;
+import { cn } from "@/lib/utils";
+
+const badgeVariants = cva(
+  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  {
+    variants: {
+      variant: {
+        default:
+          "border-transparent bg-primary text-primary-foreground hover:bg-primary/80",
+        secondary:
+          "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        destructive:
+          "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
+        outline: "text-foreground",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+    },
+  },
+);
+
+export interface BadgeProps
+  extends
+    React.HTMLAttributes<HTMLDivElement>,
+    VariantProps<typeof badgeVariants> {}
+
+function Badge({ className, variant, ...props }: BadgeProps) {
+  return (
+    <div className={cn(badgeVariants({ variant }), className)} {...props} />
+  );
 }
 
-const variantStyles: Record<string, React.CSSProperties> = {
-    default: { background: 'rgba(255,255,255,0.06)', color: '#c8d0d9', border: '1px solid rgba(255,255,255,0.08)' },
-    success: { background: 'rgba(16,185,129,0.12)', color: '#34d399', border: '1px solid rgba(16,185,129,0.15)' },
-    warning: { background: 'rgba(245,158,11,0.12)', color: '#fbbf24', border: '1px solid rgba(245,158,11,0.15)' },
-    error: { background: 'rgba(239,68,68,0.12)', color: '#f87171', border: '1px solid rgba(239,68,68,0.15)' },
-    info: { background: 'rgba(59,130,246,0.12)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.15)' },
-};
-
-export const Badge: React.FC<BadgeProps> = ({ children, variant = 'default', size = 'sm', dot }) => {
-    const sizeStyles: React.CSSProperties = size === 'sm'
-        ? { fontSize: '0.68rem', padding: '2px 8px' }
-        : { fontSize: '0.78rem', padding: '4px 12px' };
-
-    return (
-        <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: '5px',
-            borderRadius: '9999px', fontWeight: 600, letterSpacing: '0.01em',
-            whiteSpace: 'nowrap',
-            ...variantStyles[variant], ...sizeStyles,
-        }}>
-            {dot && <span style={{
-                width: 6, height: 6, borderRadius: '50%',
-                backgroundColor: variantStyles[variant].color,
-                flexShrink: 0,
-            }} />}
-            {children}
-        </span>
-    );
-};
+export { Badge, badgeVariants };

@@ -1,0 +1,9 @@
+<script>start("/Users/harshfougat/hosted_AI/client/");</script>
+<script>onHasParentDirectory();</script>
+<script>addRow("components","components",1,128,"128 B",1772877189,"3/7/26, 3:23:09 PM");</script>
+<script>addRow("hooks","hooks",1,128,"128 B",1772877189,"3/7/26, 3:23:09 PM");</script>
+<script>addRow("lib","lib",1,128,"128 B",1772877189,"3/7/26, 3:23:09 PM");</script>
+<script>addRow("pages","pages",1,128,"128 B",1772877189,"3/7/26, 3:23:09 PM");</script>
+<script>addRow("App.tsx","App.tsx",0,984,"984 B",1772877189,"3/7/26, 3:23:09 PM");</script>
+<script>addRow("global.css","global.css",0,2807,"2.7 kB",1772877189,"3/7/26, 3:23:09 PM");</script>
+<script>addRow("vite-env.d.ts","vite-env.d.ts",0,38,"38 B",1772877189,"3/7/26, 3:23:09 PM");</script>

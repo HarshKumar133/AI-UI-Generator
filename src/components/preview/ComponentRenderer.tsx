@@ -2,23 +2,23 @@
 
 import React from 'react';
 import { ComponentNode, ComponentType } from '@/types';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { Input } from '@/components/ui/Input';
-import { Table } from '@/components/ui/Table';
-import { Modal } from '@/components/ui/Modal';
-import { Sidebar } from '@/components/ui/Sidebar';
-import { Navbar } from '@/components/ui/Navbar';
-import { Chart } from '@/components/ui/Chart';
-import { Badge } from '@/components/ui/Badge';
-import { Avatar } from '@/components/ui/Avatar';
-import { Progress } from '@/components/ui/Progress';
-import { Stat } from '@/components/ui/Stat';
-import { Alert } from '@/components/ui/Alert';
-import { Toggle } from '@/components/ui/Toggle';
-import { Tabs } from '@/components/ui/Tabs';
-import { Divider } from '@/components/ui/Divider';
-import { Select } from '@/components/ui/Select';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Table } from '@/components/ui/table';
+import { Modal } from '@/components/ui/modal';
+import { Sidebar } from '@/components/ui/sidebar';
+import { Navbar } from '@/components/ui/navbar';
+import { Chart } from '@/components/ui/chart';
+import { Badge } from '@/components/ui/badge';
+import { Avatar } from '@/components/ui/avatar';
+import { Progress } from '@/components/ui/progress';
+import { Stat } from '@/components/ui/stat';
+import { Alert } from '@/components/ui/alert';
+import { Toggle } from '@/components/ui/toggle';
+import { Tabs } from '@/components/ui/tabs';
+import { Divider } from '@/components/ui/divider';
+import { Select } from '@/components/ui/select';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyComponent = React.FC<any>;

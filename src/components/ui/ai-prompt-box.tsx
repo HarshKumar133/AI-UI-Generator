@@ -440,11 +440,13 @@ const CustomDivider: React.FC = () => (
 interface PromptInputBoxProps {
     onSend?: (message: string, files?: File[]) => void;
     isLoading?: boolean;
+    isStreaming?: boolean;
     placeholder?: string;
     className?: string;
+    variant?: 'default' | 'landing';
 }
 export const PromptInputBox = React.forwardRef((props: PromptInputBoxProps, ref: React.Ref<HTMLDivElement>) => {
-    const { onSend = () => { }, isLoading = false, placeholder = "Type your message here...", className } = props;
+    const { onSend = () => { }, isLoading = false, isStreaming = false, placeholder = "Type your message here...", className, variant = 'default' } = props;
     const [input, setInput] = React.useState("");
     const [files, setFiles] = React.useState<File[]>([]);
     const [filePreviews, setFilePreviews] = React.useState<{ [key: string]: string }>({});
@@ -565,9 +567,10 @@ export const PromptInputBox = React.forwardRef((props: PromptInputBoxProps, ref:
                 className={cn(
                     "w-full bg-[#1F2023] border-[#444444] shadow-[0_8px_30px_rgba(0,0,0,0.24)] transition-all duration-300 ease-in-out",
                     isRecording && "border-red-500/70",
+                    variant === 'landing' ? "relative z-10 px-8 py-3 pr-16 rounded-full border border-gray-100 shadow-[0_8px_30px_rgba(0,0,0,0.04)] bg-white/95 backdrop-blur-xl focus-within:ring-0 focus-within:shadow-[0_8px_40px_rgba(0,0,0,0.08)] min-h-[64px] flex items-center" : "relative p-4 w-full bg-[#1F2023] border-[#444444]",
                     className
                 )}
-                disabled={isLoading || isRecording}
+                disabled={isLoading || isRecording || isStreaming}
                 ref={ref || promptBoxRef}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
@@ -603,6 +606,18 @@ export const PromptInputBox = React.forwardRef((props: PromptInputBoxProps, ref:
                     </div>
                 )}
 
+                {variant === 'landing' && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center z-20">
+                        <button
+                            onClick={handleSubmit}
+                            disabled={(!input.trim() && files.length === 0) || isLoading || isStreaming}
+                            className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f26f21] hover:bg-[#fa7355] text-white shadow-md transition-all duration-200 hover:scale-[1.03] disabled:opacity-50 cursor-pointer pointer-events-auto"
+                        >
+                            <ArrowUp className="h-[20px] w-[20px]" strokeWidth={2.5} />
+                        </button>
+                    </div>
+                )}
+
                 <div
                     className={cn(
                         "transition-all duration-300",
@@ -619,7 +634,7 @@ export const PromptInputBox = React.forwardRef((props: PromptInputBoxProps, ref:
                                         ? "Create on canvas..."
                                         : placeholder
                         }
-                        className="text-base"
+                        className={cn("text-base w-full", variant === 'landing' ? "py-0 px-0 text-[18px] lg:text-[20px] font-medium leading-[1.4] placeholder:text-gray-400 placeholder:font-normal bg-transparent text-[#333] border-none outline-none focus:ring-0 resize-none min-h-[28px] max-h-[400px] flex items-center" : "")}
                     />
                 </div>
 
@@ -631,183 +646,228 @@ export const PromptInputBox = React.forwardRef((props: PromptInputBoxProps, ref:
                     />
                 )}
 
-                <PromptInputActions className="flex items-center justify-between gap-2 p-0 pt-2">
-                    <div
-                        className={cn(
-                            "flex items-center gap-1 transition-opacity duration-300",
-                            isRecording ? "opacity-0 invisible h-0" : "opacity-100 visible"
-                        )}
-                    >
-                        <PromptInputAction tooltip="Upload image">
-                            <button
-                                onClick={() => uploadInputRef.current?.click()}
-                                className="flex h-8 w-8 text-[#9CA3AF] cursor-pointer items-center justify-center rounded-full transition-colors hover:bg-gray-600/30 hover:text-[#D1D5DB]"
-                                disabled={isRecording}
-                            >
-                                <Paperclip className="h-5 w-5 transition-colors" />
-                                <input
-                                    ref={uploadInputRef}
-                                    type="file"
-                                    className="hidden"
-                                    onChange={(e) => {
-                                        if (e.target.files && e.target.files.length > 0) processFile(e.target.files[0]);
-                                        if (e.target) e.target.value = "";
-                                    }}
-                                    accept="image/*"
-                                />
-                            </button>
-                        </PromptInputAction>
-
-                        <div className="flex items-center">
-                            <button
-                                type="button"
-                                onClick={() => handleToggleChange("search")}
-                                className={cn(
-                                    "rounded-full transition-all flex items-center gap-1 px-2 py-1 border h-8",
-                                    showSearch
-                                        ? "bg-[#1EAEDB]/15 border-[#1EAEDB] text-[#1EAEDB]"
-                                        : "bg-transparent border-transparent text-[#9CA3AF] hover:text-[#D1D5DB]"
-                                )}
-                            >
-                                <div className="w-5 h-5 flex items-center justify-center flex-shrink-0">
-                                    <motion.div
-                                        animate={{ rotate: showSearch ? 360 : 0, scale: showSearch ? 1.1 : 1 }}
-                                        whileHover={{ rotate: showSearch ? 360 : 15, scale: 1.1, transition: { type: "spring", stiffness: 300, damping: 10 } }}
-                                        transition={{ type: "spring", stiffness: 260, damping: 25 }}
-                                    >
-                                        <Globe className={cn("w-4 h-4", showSearch ? "text-[#1EAEDB]" : "text-inherit")} />
-                                    </motion.div>
-                                </div>
-                                <AnimatePresence>
-                                    {showSearch && (
-                                        <motion.span
-                                            initial={{ width: 0, opacity: 0 }}
-                                            animate={{ width: "auto", opacity: 1 }}
-                                            exit={{ width: 0, opacity: 0 }}
-                                            transition={{ duration: 0.2 }}
-                                            className="text-xs overflow-hidden whitespace-nowrap text-[#1EAEDB] flex-shrink-0"
-                                        >
-                                            Search
-                                        </motion.span>
-                                    )}
-                                </AnimatePresence>
-                            </button>
-
-                            <CustomDivider />
-
-                            <button
-                                type="button"
-                                onClick={() => handleToggleChange("think")}
-                                className={cn(
-                                    "rounded-full transition-all flex items-center gap-1 px-2 py-1 border h-8",
-                                    showThink
-                                        ? "bg-[#8B5CF6]/15 border-[#8B5CF6] text-[#8B5CF6]"
-                                        : "bg-transparent border-transparent text-[#9CA3AF] hover:text-[#D1D5DB]"
-                                )}
-                            >
-                                <div className="w-5 h-5 flex items-center justify-center flex-shrink-0">
-                                    <motion.div
-                                        animate={{ rotate: showThink ? 360 : 0, scale: showThink ? 1.1 : 1 }}
-                                        whileHover={{ rotate: showThink ? 360 : 15, scale: 1.1, transition: { type: "spring", stiffness: 300, damping: 10 } }}
-                                        transition={{ type: "spring", stiffness: 260, damping: 25 }}
-                                    >
-                                        <BrainCog className={cn("w-4 h-4", showThink ? "text-[#8B5CF6]" : "text-inherit")} />
-                                    </motion.div>
-                                </div>
-                                <AnimatePresence>
-                                    {showThink && (
-                                        <motion.span
-                                            initial={{ width: 0, opacity: 0 }}
-                                            animate={{ width: "auto", opacity: 1 }}
-                                            exit={{ width: 0, opacity: 0 }}
-                                            transition={{ duration: 0.2 }}
-                                            className="text-xs overflow-hidden whitespace-nowrap text-[#8B5CF6] flex-shrink-0"
-                                        >
-                                            Think
-                                        </motion.span>
-                                    )}
-                                </AnimatePresence>
-                            </button>
-
-                            <CustomDivider />
-
-                            <button
-                                type="button"
-                                onClick={handleCanvasToggle}
-                                className={cn(
-                                    "rounded-full transition-all flex items-center gap-1 px-2 py-1 border h-8",
-                                    showCanvas
-                                        ? "bg-[#F97316]/15 border-[#F97316] text-[#F97316]"
-                                        : "bg-transparent border-transparent text-[#9CA3AF] hover:text-[#D1D5DB]"
-                                )}
-                            >
-                                <div className="w-5 h-5 flex items-center justify-center flex-shrink-0">
-                                    <motion.div
-                                        animate={{ rotate: showCanvas ? 360 : 0, scale: showCanvas ? 1.1 : 1 }}
-                                        whileHover={{ rotate: showCanvas ? 360 : 15, scale: 1.1, transition: { type: "spring", stiffness: 300, damping: 10 } }}
-                                        transition={{ type: "spring", stiffness: 260, damping: 25 }}
-                                    >
-                                        <FolderCode className={cn("w-4 h-4", showCanvas ? "text-[#F97316]" : "text-inherit")} />
-                                    </motion.div>
-                                </div>
-                                <AnimatePresence>
-                                    {showCanvas && (
-                                        <motion.span
-                                            initial={{ width: 0, opacity: 0 }}
-                                            animate={{ width: "auto", opacity: 1 }}
-                                            exit={{ width: 0, opacity: 0 }}
-                                            transition={{ duration: 0.2 }}
-                                            className="text-xs overflow-hidden whitespace-nowrap text-[#F97316] flex-shrink-0"
-                                        >
-                                            Canvas
-                                        </motion.span>
-                                    )}
-                                </AnimatePresence>
-                            </button>
-                        </div>
-                    </div>
-
-                    <PromptInputAction
-                        tooltip={
-                            isLoading
-                                ? "Stop generation"
-                                : isRecording
-                                    ? "Stop recording"
-                                    : hasContent
-                                        ? "Send message"
-                                        : "Voice message"
-                        }
-                    >
-                        <Button
-                            variant="default"
-                            size="icon"
-                            className={cn(
-                                "h-8 w-8 rounded-full transition-all duration-200",
-                                isRecording
-                                    ? "bg-transparent hover:bg-gray-600/30 text-red-500 hover:text-red-400"
-                                    : hasContent
-                                        ? "bg-white hover:bg-white/80 text-[#1F2023]"
-                                        : "bg-transparent hover:bg-gray-600/30 text-[#9CA3AF] hover:text-[#D1D5DB]"
-                            )}
-                            onClick={() => {
-                                if (isRecording) setIsRecording(false);
-                                else if (hasContent) handleSubmit();
-                                else setIsRecording(true);
-                            }}
-                            disabled={isLoading && !hasContent}
+                {variant === 'landing' ? (
+                    <PromptInputActions className="flex items-center justify-end gap-2 p-0 pt-2">
+                        <PromptInputAction
+                            tooltip={
+                                isLoading
+                                    ? "Stop generation"
+                                    : isRecording
+                                        ? "Stop recording"
+                                        : hasContent
+                                            ? "Send message"
+                                            : "Voice message"
+                            }
                         >
-                            {isLoading ? (
-                                <Square className="h-4 w-4 fill-[#1F2023] animate-pulse" />
-                            ) : isRecording ? (
-                                <StopCircle className="h-5 w-5 text-red-500" />
-                            ) : hasContent ? (
-                                <ArrowUp className="h-4 w-4 text-[#1F2023]" />
-                            ) : (
-                                <Mic className="h-5 w-5 text-[#1F2023] transition-colors" />
+                            <Button
+                                variant="default"
+                                size="icon"
+                                className={cn(
+                                    "h-8 w-8 rounded-full transition-all duration-200",
+                                    isRecording
+                                        ? "bg-transparent hover:bg-gray-600/30 text-red-500 hover:text-red-400"
+                                        : hasContent
+                                            ? "bg-gray-800 hover:bg-gray-700 text-white"
+                                            : "bg-transparent hover:bg-gray-600/30 text-[#9CA3AF] hover:text-[#D1D5DB]"
+                                )}
+                                onClick={() => {
+                                    if (isRecording) setIsRecording(false);
+                                    else if (hasContent) handleSubmit();
+                                    else setIsRecording(true);
+                                }}
+                                disabled={isLoading && !hasContent}
+                            >
+                                {isLoading ? (
+                                    <Square className="h-4 w-4 fill-white animate-pulse" />
+                                ) : isRecording ? (
+                                    <StopCircle className="h-5 w-5 text-red-500" />
+                                ) : hasContent ? (
+                                    <ArrowUp className="h-4 w-4 text-white" />
+                                ) : (
+                                    <Mic className="h-5 w-5 text-white transition-colors" />
+                                )}
+                            </Button>
+                        </PromptInputAction>
+                    </PromptInputActions>
+                ) : (
+                    <PromptInputActions className="flex items-center justify-between gap-2 p-0 pt-2">
+                        <div
+                            className={cn(
+                                "flex items-center gap-1 transition-opacity duration-300",
+                                isRecording ? "opacity-0 invisible h-0" : "opacity-100 visible"
                             )}
-                        </Button>
-                    </PromptInputAction>
-                </PromptInputActions>
+                        >
+                            <PromptInputAction tooltip="Upload image">
+                                <button
+                                    onClick={() => uploadInputRef.current?.click()}
+                                    className="flex h-8 w-8 text-[#9CA3AF] cursor-pointer items-center justify-center rounded-full transition-colors hover:bg-gray-600/30 hover:text-[#D1D5DB]"
+                                    disabled={isRecording}
+                                >
+                                    <Paperclip className="h-5 w-5 transition-colors" />
+                                    <input
+                                        ref={uploadInputRef}
+                                        type="file"
+                                        className="hidden"
+                                        onChange={(e) => {
+                                            if (e.target.files && e.target.files.length > 0) processFile(e.target.files[0]);
+                                            if (e.target) e.target.value = "";
+                                        }}
+                                        accept="image/*"
+                                    />
+                                </button>
+                            </PromptInputAction>
+
+                            <div className="flex items-center">
+                                <button
+                                    type="button"
+                                    onClick={() => handleToggleChange("search")}
+                                    className={cn(
+                                        "rounded-full transition-all flex items-center gap-1 px-2 py-1 border h-8",
+                                        showSearch
+                                            ? "bg-[#1EAEDB]/15 border-[#1EAEDB] text-[#1EAEDB]"
+                                            : "bg-transparent border-transparent text-[#9CA3AF] hover:text-[#D1D5DB]"
+                                    )}
+                                >
+                                    <div className="w-5 h-5 flex items-center justify-center flex-shrink-0">
+                                        <motion.div
+                                            animate={{ rotate: showSearch ? 360 : 0, scale: showSearch ? 1.1 : 1 }}
+                                            whileHover={{ rotate: showSearch ? 360 : 15, scale: 1.1, transition: { type: "spring", stiffness: 300, damping: 10 } }}
+                                            transition={{ type: "spring", stiffness: 260, damping: 25 }}
+                                        >
+                                            <Globe className={cn("w-4 h-4", showSearch ? "text-[#1EAEDB]" : "text-inherit")} />
+                                        </motion.div>
+                                    </div>
+                                    <AnimatePresence>
+                                        {showSearch && (
+                                            <motion.span
+                                                initial={{ width: 0, opacity: 0 }}
+                                                animate={{ width: "auto", opacity: 1 }}
+                                                exit={{ width: 0, opacity: 0 }}
+                                                transition={{ duration: 0.2 }}
+                                                className="text-xs overflow-hidden whitespace-nowrap text-[#1EAEDB] flex-shrink-0"
+                                            >
+                                                Search
+                                            </motion.span>
+                                        )}
+                                    </AnimatePresence>
+                                </button>
+
+                                <CustomDivider />
+
+                                <button
+                                    type="button"
+                                    onClick={() => handleToggleChange("think")}
+                                    className={cn(
+                                        "rounded-full transition-all flex items-center gap-1 px-2 py-1 border h-8",
+                                        showThink
+                                            ? "bg-[#8B5CF6]/15 border-[#8B5CF6] text-[#8B5CF6]"
+                                            : "bg-transparent border-transparent text-[#9CA3AF] hover:text-[#D1D5DB]"
+                                    )}
+                                >
+                                    <div className="w-5 h-5 flex items-center justify-center flex-shrink-0">
+                                        <motion.div
+                                            animate={{ rotate: showThink ? 360 : 0, scale: showThink ? 1.1 : 1 }}
+                                            whileHover={{ rotate: showThink ? 360 : 15, scale: 1.1, transition: { type: "spring", stiffness: 300, damping: 10 } }}
+                                            transition={{ type: "spring", stiffness: 260, damping: 25 }}
+                                        >
+                                            <BrainCog className={cn("w-4 h-4", showThink ? "text-[#8B5CF6]" : "text-inherit")} />
+                                        </motion.div>
+                                    </div>
+                                    <AnimatePresence>
+                                        {showThink && (
+                                            <motion.span
+                                                initial={{ width: 0, opacity: 0 }}
+                                                animate={{ width: "auto", opacity: 1 }}
+                                                exit={{ width: 0, opacity: 0 }}
+                                                transition={{ duration: 0.2 }}
+                                                className="text-xs overflow-hidden whitespace-nowrap text-[#8B5CF6] flex-shrink-0"
+                                            >
+                                                Think
+                                            </motion.span>
+                                        )}
+                                    </AnimatePresence>
+                                </button>
+
+                                <CustomDivider />
+
+                                <button
+                                    type="button"
+                                    onClick={handleCanvasToggle}
+                                    className={cn(
+                                        "rounded-full transition-all flex items-center gap-1 px-2 py-1 border h-8",
+                                        showCanvas
+                                            ? "bg-[#F97316]/15 border-[#F97316] text-[#F97316]"
+                                            : "bg-transparent border-transparent text-[#9CA3AF] hover:text-[#D1D5DB]"
+                                    )}
+                                >
+                                    <div className="w-5 h-5 flex items-center justify-center flex-shrink-0">
+                                        <motion.div
+                                            animate={{ rotate: showCanvas ? 360 : 0, scale: showCanvas ? 1.1 : 1 }}
+                                            whileHover={{ rotate: showCanvas ? 360 : 15, scale: 1.1, transition: { type: "spring", stiffness: 300, damping: 10 } }}
+                                            transition={{ type: "spring", stiffness: 260, damping: 25 }}
+                                        >
+                                            <FolderCode className={cn("w-4 h-4", showCanvas ? "text-[#F97316]" : "text-inherit")} />
+                                        </motion.div>
+                                    </div>
+                                    <AnimatePresence>
+                                        {showCanvas && (
+                                            <motion.span
+                                                initial={{ width: 0, opacity: 0 }}
+                                                animate={{ width: "auto", opacity: 1 }}
+                                                exit={{ width: 0, opacity: 0 }}
+                                                transition={{ duration: 0.2 }}
+                                                className="text-xs overflow-hidden whitespace-nowrap text-[#F97316] flex-shrink-0"
+                                            >
+                                                Canvas
+                                            </motion.span>
+                                        )}
+                                    </AnimatePresence>
+                                </button>
+                            </div>
+                        </div>
+
+                        <PromptInputAction
+                            tooltip={
+                                isLoading
+                                    ? "Stop generation"
+                                    : isRecording
+                                        ? "Stop recording"
+                                        : hasContent
+                                            ? "Send message"
+                                            : "Voice message"
+                            }
+                        >
+                            <Button
+                                variant="default"
+                                size="icon"
+                                className={cn(
+                                    "h-8 w-8 rounded-full transition-all duration-200",
+                                    isRecording
+                                        ? "bg-transparent hover:bg-gray-600/30 text-red-500 hover:text-red-400"
+                                        : hasContent
+                                            ? "bg-white hover:bg-white/80 text-[#1F2023]"
+                                            : "bg-transparent hover:bg-gray-600/30 text-[#9CA3AF] hover:text-[#D1D5DB]"
+                                )}
+                                onClick={() => {
+                                    if (isRecording) setIsRecording(false);
+                                    else if (hasContent) handleSubmit();
+                                    else setIsRecording(true);
+                                }}
+                                disabled={isLoading && !hasContent}
+                            >
+                                {isLoading ? (
+                                    <Square className="h-4 w-4 fill-[#1F2023] animate-pulse" />
+                                ) : isRecording ? (
+                                    <StopCircle className="h-5 w-5 text-red-500" />
+                                ) : hasContent ? (
+                                    <ArrowUp className="h-4 w-4 text-[#1F2023]" />
+                                ) : (
+                                    <Mic className="h-5 w-5 text-[#1F2023] transition-colors" />
+                                )}
+                            </Button>
+                        </PromptInputAction>
+                    </PromptInputActions>
+                )}
             </PromptInput>
 
             <ImageViewDialog imageUrl={selectedImage} onClose={() => setSelectedImage(null)} />

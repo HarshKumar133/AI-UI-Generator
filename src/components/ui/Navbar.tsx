@@ -1,6 +1,6 @@
 import React from 'react';
 import styles from '@/styles/components/navbar.module.css';
-import { Button } from './Button';
+import { Button } from './button';
 
 export interface NavLink {
   id?: string;

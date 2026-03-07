@@ -1,50 +1,50 @@
-export { Button } from './Button';
-export type { ButtonProps } from './Button';
+export { Button } from './button';
+export type { ButtonProps } from './button';
 
-export { Card } from './Card';
-export type { CardProps } from './Card';
+export { Card } from './card';
+export type { CardProps } from './card';
 
-export { Input } from './Input';
-export type { InputProps } from './Input';
+export { Input } from './input';
+export type { InputProps } from './input';
 
-export { Table } from './Table';
-export type { TableColumn, TableProps } from './Table';
+export { Table } from './table';
+export type { TableColumn, TableProps } from './table';
 
-export { Modal } from './Modal';
-export type { ModalProps } from './Modal';
+export { Modal } from './modal';
+export type { ModalProps } from './modal';
 
-export { Sidebar } from './Sidebar';
-export type { SidebarItem, SidebarGroup, SidebarProps } from './Sidebar';
+export { Sidebar } from './sidebar';
+export type { SidebarItem, SidebarGroup, SidebarProps } from './sidebar';
 
-export { Navbar } from './Navbar';
-export type { NavLink, NavbarProps } from './Navbar';
+export { Navbar } from './navbar';
+export type { NavLink, NavbarProps } from './navbar';
 
-export { Chart } from './Chart';
-export type { ChartDataPoint, ChartProps } from './Chart';
+export { Chart } from './chart';
+export type { ChartDataPoint, ChartProps } from './chart';
 
-export { Badge } from './Badge';
-export type { BadgeProps } from './Badge';
+export { Badge } from './badge';
+export type { BadgeProps } from './badge';
 
-export { Avatar } from './Avatar';
-export type { AvatarProps } from './Avatar';
+export { Avatar } from './avatar';
+export type { AvatarProps } from './avatar';
 
-export { Progress } from './Progress';
-export type { ProgressProps } from './Progress';
+export { Progress } from './progress';
+export type { ProgressProps } from './progress';
 
-export { Stat } from './Stat';
-export type { StatProps } from './Stat';
+export { Stat } from './stat';
+export type { StatProps } from './stat';
 
-export { Alert } from './Alert';
-export type { AlertProps } from './Alert';
+export { Alert } from './alert';
+export type { AlertProps } from './alert';
 
-export { Toggle } from './Toggle';
-export type { ToggleProps } from './Toggle';
+export { Toggle } from './toggle';
+export type { ToggleProps } from './toggle';
 
-export { Tabs } from './Tabs';
-export type { TabItem, TabsProps } from './Tabs';
+export { Tabs } from './tabs';
+export type { TabItem, TabsProps } from './tabs';
 
-export { Divider } from './Divider';
-export type { DividerProps } from './Divider';
+export { Divider } from './divider';
+export type { DividerProps } from './divider';
 
-export { Select } from './Select';
-export type { SelectOption, SelectProps } from './Select';
+export { Select } from './select';
+export type { SelectOption, SelectProps } from './select';

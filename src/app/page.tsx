@@ -6,6 +6,7 @@ import { ChatPanel } from '@/components/layout/ChatPanel';
 import { CodePanel } from '@/components/layout/CodePanel';
 import { VersionHistory } from '@/components/layout/VersionHistory';
 import { PreviewPanel } from '@/components/preview/PreviewPanel';
+import { LandingPage } from '@/components/home/LandingPage';
 import { ChatMessage, GenerationResult, ComponentNode, ComponentType, VersionEntry, AgentEventState } from '@/types';
 import { Template } from '@/lib/templates';
 import {
@@ -281,6 +282,11 @@ export default function Home() {
   }, []);
 
   const hasOutput = !!(currentCode || currentHtml);
+  const isWorkspaceEmpty = messages.length === 0 && !hasOutput && !isLoading;
+
+  if (isWorkspaceEmpty) {
+    return <LandingPage onSendMessage={handleSendMessage} isLoading={isLoading} />;
+  }
 
   return (
     <div className={styles.appContainer}>
