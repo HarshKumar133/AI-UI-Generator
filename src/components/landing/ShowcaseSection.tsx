@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { CreativeIdeationArt } from "./creativeart";
+import { CreativeIdeationArt } from "./CreativeArt";
 
 export function ShowcaseSection() {
   return (

@@ -4,8 +4,8 @@ import React from 'react';
 import styles from '@/styles/components/previewPanel.module.css';
 import { ComponentNode } from '@/types';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { ComponentRenderer } from './componentrenderer';
-import LivePreview from './livepreview';
+import { ComponentRenderer } from './ComponentRenderer';
+import LivePreview from './LivePreview';
 import { Eye, AlertTriangle } from 'lucide-react';
 
 interface PreviewPanelProps {

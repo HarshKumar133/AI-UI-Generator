@@ -1,8 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { WireframeGrid } from "./wireframedecorations";
+import { WireframeGrid } from "./WireframeDecorations";
 
-import { CreativeIdeationArt, MatrixRainArt } from "./creativeart";
+import { CreativeIdeationArt, MatrixRainArt } from "./CreativeArt";
 
 export function FinalCTASection() {
   return (
