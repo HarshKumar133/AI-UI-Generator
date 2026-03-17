@@ -6,41 +6,31 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Modal } from '@/components/ui/modal';
 import { Sidebar } from '@/components/ui/sidebar';
-import { Navbar } from '@/components/ui/navbar';
-import { ChartContainer as Chart } from '@/components/ui/chart';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
-import { Stat } from '@/components/ui/stat';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Toggle } from '@/components/ui/toggle';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Divider } from '@/components/ui/divider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyComponent = React.FC<any>;
 
-const COMPONENT_MAP: Record<ComponentType, AnyComponent> = {
+const COMPONENT_MAP: Record<string, AnyComponent> = {
+    Badge: Badge as AnyComponent,
     Button: Button as AnyComponent,
     Card: Card as AnyComponent,
     Input: Input as AnyComponent,
     Table: Table as AnyComponent,
-    Modal: Modal as AnyComponent,
     Sidebar: Sidebar as AnyComponent,
-    Navbar: Navbar as AnyComponent,
-    Chart: Chart as AnyComponent,
-    Badge: Badge as AnyComponent,
     Avatar: Avatar as AnyComponent,
     Progress: Progress as AnyComponent,
-    Stat: Stat as AnyComponent,
     Alert: Alert as AnyComponent,
     Toggle: Toggle as AnyComponent,
     Tabs: Tabs as AnyComponent,
-    Divider: Divider as AnyComponent,
     Select: Select as AnyComponent,
 };
 

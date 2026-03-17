@@ -39,17 +39,17 @@ PREMIUM DESIGN MANDATES
 ════════════════════════
 
 1. GRADIENT TEXT — All h1/h2 must use gradient text:
-   style={{ background: 'linear-gradient(135deg, #f0f2f5 0%, #10b981 60%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', margin: 0 }}
+   style={{ background: 'linear-gradient(135deg, #15120f 0%, #da4f2f 65%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', margin: 0 }}
 
 2. AMBIENT BACKGROUND — Page root must have layered radial gradients:
-   style={{ minHeight: '100vh', background: 'radial-gradient(ellipse at 15% 10%, rgba(16,185,129,0.09) 0%, transparent 45%), radial-gradient(ellipse at 85% 80%, rgba(59,130,246,0.07) 0%, transparent 40%), #09090b' }}
+   style={{ minHeight: '100vh', background: 'radial-gradient(ellipse at 15% 10%, rgba(218,79,47,0.1) 0%, transparent 45%), radial-gradient(ellipse at 85% 80%, rgba(240,122,96,0.08) 0%, transparent 40%), #fffdf9' }}
 
-3. GLASSMORPHISM CARDS — Key containers:
-   style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 24, backdropFilter: 'blur(12px)' }}
+3. GLASS SURFACE CARDS — Key containers:
+   style={{ background: 'rgba(255,255,255,0.9)', border: '1px solid rgba(21,18,15,0.12)', borderRadius: 24, backdropFilter: 'blur(12px)' }}
 
 4. HOVER MICRO-ANIMATIONS — Every feature card MUST use:
    const [h, setH] = React.useState(false);
-   style={{ transform: h ? 'translateY(-5px) scale(1.015)' : 'none', transition: 'all 280ms cubic-bezier(0.34, 1.56, 0.64, 1)', boxShadow: h ? '0 24px 60px rgba(0,0,0,0.45), 0 0 0 1px rgba(16,185,129,0.12)' : '0 2px 12px rgba(0,0,0,0.2)' }}
+   style={{ transform: h ? 'translateY(-5px) scale(1.015)' : 'none', transition: 'all 280ms cubic-bezier(0.34, 1.56, 0.64, 1)', boxShadow: h ? '0 24px 60px rgba(65,43,24,0.18), 0 0 0 1px rgba(218,79,47,0.16)' : '0 2px 12px rgba(65,43,24,0.1)' }}
 
 5. DENSE REAL DATA — No placeholder content. Real business-like data:
    - Months: Jan–Dec, realistic numbers (revenue $120k–$500k, users 10k–200k)
@@ -59,8 +59,8 @@ PREMIUM DESIGN MANDATES
 6. TYPOGRAPHY SCALE:
    - h1: fontSize '3rem+', fontWeight 900, letterSpacing '-0.04em', lineHeight 1.05
    - h2: fontSize '1.8rem', fontWeight 800, letterSpacing '-0.03em'
-   - Subtitles: fontSize '1.1rem', color '#a0aab4', lineHeight 1.65
-   - Labels: fontSize '0.72rem', fontWeight 700, letterSpacing '0.06em', textTransform 'uppercase', color '#6b7280'
+   - Subtitles: fontSize '1.1rem', color '#5d544b', lineHeight 1.65
+   - Labels: fontSize '0.72rem', fontWeight 700, letterSpacing '0.06em', textTransform 'uppercase', color '#8a7e72'
 
 7. ACCESSIBILITY & RESPONSIVENESS:
    - Add descriptive 'aria-label' to icon-only buttons and elements without visible text.
@@ -80,7 +80,7 @@ import { Navbar, Sidebar, Stat, Chart, Table, Badge, Card, Button, Progress, Ava
 export default function GeneratedUI() {
   const [activeItem, setActiveItem] = React.useState('overview');
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'radial-gradient(ellipse at 10% 5%, rgba(16,185,129,0.08) 0%, transparent 40%), radial-gradient(ellipse at 90% 90%, rgba(59,130,246,0.06) 0%, transparent 35%), #09090b', color: '#eceff2', fontFamily: "'Inter', system-ui, sans-serif", overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'radial-gradient(ellipse at 10% 5%, rgba(218,79,47,0.09) 0%, transparent 40%), radial-gradient(ellipse at 90% 90%, rgba(240,122,96,0.07) 0%, transparent 35%), #fffdf9', color: '#15120f', fontFamily: "'Inter', system-ui, sans-serif", overflow: 'hidden' }}>
       <Navbar brand="⚡ Pulse" items={[{ label: 'Overview', href: '#' }, { label: 'Revenue', href: '#' }, { label: 'Users', href: '#' }, { label: 'Reports', href: '#' }]} actions={[{ label: 'Export CSV', variant: 'ghost' }, { label: '✦ Upgrade', variant: 'primary' }]} />
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         <Sidebar width={230} title="WORKSPACE" groups={[
@@ -99,8 +99,8 @@ export default function GeneratedUI() {
         <main style={{ flex: 1, overflowY: 'auto', padding: '28px 36px', display: 'flex', flexDirection: 'column', gap: 28 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
-              <h1 style={{ fontSize: '2rem', fontWeight: 900, letterSpacing: '-0.04em', background: 'linear-gradient(135deg, #f0f2f5 20%, #10b981 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', margin: 0 }}>Business Overview</h1>
-              <p style={{ color: '#6b7280', fontSize: '0.82rem', marginTop: 4 }}>Last updated: Feb 22, 2026, 10:14 AM · All regions</p>
+              <h1 style={{ fontSize: '2rem', fontWeight: 900, letterSpacing: '-0.04em', background: 'linear-gradient(135deg, #15120f 20%, #da4f2f 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', margin: 0 }}>Business Overview</h1>
+              <p style={{ color: '#8a7e72', fontSize: '0.82rem', marginTop: 4 }}>Last updated: Feb 22, 2026, 10:14 AM · All regions</p>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <Badge variant="success" dot>● Live</Badge>
@@ -114,7 +114,7 @@ export default function GeneratedUI() {
               { label: 'Conversion Rate', value: '4.82%', trend: '+0.9%', icon: '🎯', subtitle: 'Landing → Trial' },
               { label: 'Avg Session', value: '8m 43s', trend: '-0.2%', icon: '⏱', subtitle: 'Bounce rate: 22%' },
             ].map((kpi, i) => (
-              <div key={i} style={{ background: 'rgba(255,255,255,0.028)', border: '1px solid rgba(255,255,255,0.065)', borderRadius: 20, padding: '22px 24px' }}>
+              <div key={i} style={{ background: 'rgba(255,255,255,0.92)', border: '1px solid rgba(21,18,15,0.12)', borderRadius: 20, padding: '22px 24px' }}>
                 <Stat label={kpi.label} value={kpi.value} trend={kpi.trend} icon={kpi.icon} subtitle={kpi.subtitle} />
               </div>
             ))}
@@ -152,14 +152,14 @@ LANDING PAGE — "landing-page" layout:
 - Root: full-width radial gradient bg, overflow hidden
 - HERO: Giant h1 (4rem, gradient text) + subtitle + two CTA buttons, centered, 100px top padding
 - Subtle animated glow orb behind hero text:
-  <div style={{ position: 'absolute', top: '20%', left: '50%', transform: 'translateX(-50%)', width: 600, height: 600, background: 'radial-gradient(circle, rgba(16,185,129,0.12) 0%, transparent 70%)', pointerEvents: 'none', borderRadius: '50%' }} />
+  <div style={{ position: 'absolute', top: '20%', left: '50%', transform: 'translateX(-50%)', width: 600, height: 600, background: 'radial-gradient(circle, rgba(218,79,47,0.14) 0%, transparent 70%)', pointerEvents: 'none', borderRadius: '50%' }} />
 - 3-column feature Cards grid below hero
-- Bottom CTA with contrasting background: rgba(16,185,129,0.06), 1px solid rgba(16,185,129,0.15)
+- Bottom CTA with contrasting background: rgba(218,79,47,0.08), 1px solid rgba(218,79,47,0.2)
 
 LOGIN / SIGNUP — "centered" layout:
 - Root: centered flexbox, radial glow background
-- Glow orb behind the card: absolute, 400px circle, 12% emerald opacity
-- Card: maxWidth 420px, glassmorphism style, generous padding
+- Glow orb behind the card: absolute, 400px circle, 12% brand-red opacity
+- Card: maxWidth 420px, light glass surface style, generous padding
 - Social auth buttons above email/pass for premium feel
 - Micro-copy beneath form: "By continuing you agree to our Terms"
 
@@ -202,7 +202,7 @@ ${getComponentDescriptions()}
 PREMIUM DESIGN MANDATES
 ════════════════════════
 1. GLASSMORPHISM CARDS:
-   style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 24, backdropFilter: 'blur(12px)' }}
+   style={{ background: 'rgba(255,255,255,0.9)', border: '1px solid rgba(21,18,15,0.12)', borderRadius: 24, backdropFilter: 'blur(12px)' }}
 2. HOVER MICRO-ANIMATIONS for cards/rows.
 3. DENSE REAL DATA: No placeholders. Real terminology.
 4. EMOJI ICONS: Use emojis for visual flair.
@@ -230,7 +230,7 @@ STRICT IMPORT RULES
 PREMIUM DESIGN MANDATES
 ════════════════════════
 1. AMBIENT BACKGROUND on the root div:
-   style={{ minHeight: '100vh', background: 'radial-gradient(ellipse at 15% 10%, rgba(16,185,129,0.09) 0%, transparent 45%), radial-gradient(ellipse at 85% 80%, rgba(59,130,246,0.07) 0%, transparent 40%), #09090b', color: '#eceff2', display: 'flex' }}
+   style={{ minHeight: '100vh', background: 'radial-gradient(ellipse at 15% 10%, rgba(218,79,47,0.1) 0%, transparent 45%), radial-gradient(ellipse at 85% 80%, rgba(240,122,96,0.08) 0%, transparent 40%), #fffdf9', color: '#15120f', display: 'flex' }}
 2. GRADIENT TEXT for any page headers you create.
 3. Handle flex/grid alignments properly so sidebars stick and main content areas scroll.
 
@@ -349,6 +349,7 @@ export async function runGenerator(plan: PlannerOutput, onEvent?: (e: Generation
       .replace(/export default [A-Za-z0-9_]+;?\n?/g, '')
       .replace(/import {[^}]+} from ['"]@\/components\/ui['"];?\n?/g, '')
       .replace(/import React[^;]+;?\n?/g, '');
+    cleanBlock = normalizeBlockDeclaration(cleanBlock, blockNames[i]);
     return `// --- Block: ${blockNames[i]} ---\n${cleanBlock}`;
   });
 
@@ -375,6 +376,30 @@ export async function runGenerator(plan: PlannerOutput, onEvent?: (e: Generation
   }
 
   return { code: finalCode, componentList: Array.from(allUsedComponents) };
+}
+
+function normalizeBlockDeclaration(code: string, expectedName: string): string {
+  let normalized = code.trim();
+
+  // Convert common "export default function X" shape into local declaration.
+  normalized = normalized.replace(
+    /export\s+default\s+function\s+[A-Za-z0-9_]+\s*\(/,
+    `function ${expectedName}(`,
+  );
+
+  // Handle malformed model output like: "DashboardBlock() { ... }"
+  normalized = normalized.replace(
+    new RegExp(`^\\s*${expectedName}\\s*\\(`),
+    `function ${expectedName}(`,
+  );
+
+  // If the block was emitted with a different PascalCase function name, rewrite the first declaration.
+  const hasExpectedName = new RegExp(`\\b(function\\s+${expectedName}\\s*\\(|const\\s+${expectedName}\\s*=|let\\s+${expectedName}\\s*=|var\\s+${expectedName}\\s*=)`).test(normalized);
+  if (!hasExpectedName) {
+    normalized = normalized.replace(/^\s*([A-Z][A-Za-z0-9_]*)\s*\(/, `function ${expectedName}(`);
+  }
+
+  return normalized;
 }
 
 // ---- HELPER: Layout guidance ----

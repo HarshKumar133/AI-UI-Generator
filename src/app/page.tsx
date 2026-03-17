@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import styles from '@/styles/components/appLayout.module.css';
 import { ChatPanel } from '@/components/layout/ChatPanel';
 import { CodePanel } from '@/components/layout/CodePanel';
@@ -54,8 +54,10 @@ export default function Home() {
   const [previewError, setPreviewError] = useState<string | undefined>();
   const [currentTitle, setCurrentTitle] = useState('');
   const [activeAgents, setActiveAgents] = useState<AgentEventState[]>([]);
+  const [workspaceEntering, setWorkspaceEntering] = useState(false);
 
   const versionCounterRef = useRef(0);
+  const hasEnteredWorkspaceRef = useRef(false);
 
   // Write TSX to disk so Next.js can compile it natively
   const writePreviewFile = useCallback(async (code: string) => {
@@ -133,6 +135,7 @@ export default function Home() {
     const userMsg: ChatMessage = { id: `user-${Date.now()}`, role: 'user', content: message, timestamp: new Date().toISOString() };
     setMessages(prev => [...prev, userMsg]);
     setIsLoading(true);
+    setPreviewError(undefined);
 
     try {
       // Detect whether to use full-app mode or component mode
@@ -200,7 +203,7 @@ export default function Home() {
                 let event;
                 try {
                   event = JSON.parse(eventString.replace('data: ', '').trim());
-                } catch (parseError) {
+                } catch {
                   continue; // Ignore JSON parse errors from chunk fragments
                 }
 
@@ -236,8 +239,10 @@ export default function Home() {
         }
       }
     } catch (error) {
-      const errorMsg: ChatMessage = { id: `error-${Date.now()}`, role: 'assistant', content: `Error: ${error instanceof Error ? error.message : 'Generation failed. Please try again.'}`, timestamp: new Date().toISOString() };
+      const errorText = error instanceof Error ? error.message : 'Generation failed. Please try again.';
+      const errorMsg: ChatMessage = { id: `error-${Date.now()}`, role: 'assistant', content: `Error: ${errorText}`, timestamp: new Date().toISOString() };
       setMessages(prev => [...prev, errorMsg]);
+      setPreviewError(errorText);
       setActiveAgents([]);
     } finally {
       setIsLoading(false);
@@ -284,12 +289,21 @@ export default function Home() {
   const hasOutput = !!(currentCode || currentHtml);
   const isWorkspaceEmpty = messages.length === 0 && !hasOutput && !isLoading;
 
+  useEffect(() => {
+    if (!isWorkspaceEmpty && !hasEnteredWorkspaceRef.current) {
+      hasEnteredWorkspaceRef.current = true;
+      setWorkspaceEntering(true);
+      const timer = setTimeout(() => setWorkspaceEntering(false), 420);
+      return () => clearTimeout(timer);
+    }
+  }, [isWorkspaceEmpty]);
+
   if (isWorkspaceEmpty) {
     return <LandingPage onSendMessage={handleSendMessage} isLoading={isLoading} />;
   }
 
   return (
-    <div className={styles.appContainer}>
+    <div className={`${styles.appContainer} ${workspaceEntering ? styles.workspaceEntering : ''}`}>
       {/* Top Bar */}
       <div className={styles.topBar}>
         <div className={styles.topBarBrand}>
@@ -302,7 +316,7 @@ export default function Home() {
             <span className={styles.versionTag}>v{currentVersion}</span>
           )}
           {outputMode === 'html' && (
-            <span className={styles.versionTag} style={{ background: 'rgba(16,185,129,0.12)', color: '#10b981', border: '1px solid rgba(16,185,129,0.2)' }}>⚡ Full App</span>
+            <span className={styles.versionTag} style={{ background: 'rgba(218,79,47,0.12)', color: '#da4f2f', border: '1px solid rgba(218,79,47,0.2)' }}>⚡ Full App</span>
           )}
           {versions.length > 0 && (
             <button className={styles.topBarButton} onClick={() => setShowVersionHistory(true)} id="history-button">
@@ -338,6 +352,7 @@ export default function Home() {
             onLoadTemplate={handleLoadTemplate}
             isLoading={isLoading}
             hasCode={hasOutput}
+            activeAgents={activeAgents}
           />
         </div>
 

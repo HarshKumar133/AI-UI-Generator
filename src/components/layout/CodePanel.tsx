@@ -2,13 +2,15 @@
 
 import React, { useState } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import styles from '@/styles/components/codePanel.module.css';
 import { ComponentType } from '@/types';
 import {
   FileCode2,
   Copy,
   Check,
+  Sparkles,
+  Wand2,
 } from 'lucide-react';
 
 interface CodePanelProps {
@@ -53,6 +55,10 @@ export const CodePanel: React.FC<CodePanelProps> = ({
           </div>
         </div>
         <div className={styles.emptyState}>
+          <div className={styles.emptyBadge}>
+            <Sparkles size={13} />
+            Builder Ready
+          </div>
           {/* Code wireframe illustration */}
           <div className={styles.codeWireframe}>
             <div className={styles.codeLine}>
@@ -98,9 +104,13 @@ export const CodePanel: React.FC<CodePanelProps> = ({
               <span className={styles.codeBlock} style={{ width: '30px' }} />
             </div>
           </div>
-          <div className={styles.emptyTitle}>No code yet</div>
+          <div className={styles.emptyTitle}>No code generated yet</div>
           <div className={styles.emptyHint}>
-            Generated code will appear here. Use the chat to describe your UI.
+            Generated `GeneratedUI.tsx` appears here. Start with a clear prompt like:
+          </div>
+          <div className={styles.quickPrompt}>
+            <Wand2 size={13} />
+            Build a reporting dashboard with KPI cards, trend chart, and recent reports table.
           </div>
         </div>
       </div>
@@ -136,12 +146,12 @@ export const CodePanel: React.FC<CodePanelProps> = ({
         <div className={styles.codeWrapper}>
           <SyntaxHighlighter
             language="tsx"
-            style={vscDarkPlus}
+            style={oneLight}
             showLineNumbers
             wrapLines
             customStyle={{
               margin: 0,
-              background: 'transparent',
+              background: '#fffaf4',
               fontSize: '0.82rem',
             }}
           >

@@ -308,7 +308,6 @@ function OrbitArt({ palette, speed }: { palette: any, speed: number }) {
             }}
             style={{
               border: `1.5px dashed ${r === 1 ? palette.secondary : r === 2 ? palette.primary : palette.accent}`,
-              opacity: 0.6,
               padding: `${ring.size / 2}px`
             }}
             className="absolute inset-0 rounded-full"

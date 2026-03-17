@@ -1,24 +1,27 @@
-import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowRight, Search, Loader2 } from "lucide-react";
+import { ArrowRight, Search } from "lucide-react";
 import { motion } from "framer-motion";
-import { WireframeGrid, NodeGraph, CodeWindow } from "./WireframeDecorations";
+import { WireframeGrid, NodeGraph } from "./WireframeDecorations";
+
+import { useState } from "react";
+import { Loader2 } from "lucide-react";
 
 interface HeroSectionProps {
-  onSendMessage?: (message: string) => void;
+  onSendMessage?: (msg: string) => void;
   isLoading?: boolean;
 }
 
 export function HeroSection({ onSendMessage, isLoading }: HeroSectionProps) {
-  const [prompt, setPrompt] = useState("");
+  const [inputValue, setInputValue] = useState("");
 
-  const handleSubmit = (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (prompt.trim() && onSendMessage && !isLoading) {
-      onSendMessage(prompt.trim());
+  const handleSubmit = () => {
+    if (inputValue.trim() && onSendMessage) {
+      onSendMessage(inputValue);
+      setInputValue("");
     }
   };
+
   return (
     <section className="relative bg-brand-cream/40 py-20 lg:py-40 overflow-hidden">
       <WireframeGrid className="text-brand-dark/20" />
@@ -45,21 +48,27 @@ export function HeroSection({ onSendMessage, isLoading }: HeroSectionProps) {
           transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
           className="mx-auto mt-16 max-w-3xl relative"
         >
-          <CodeWindow className="absolute -right-32 -top-16 w-64 hidden 2xl:block" />
-          
-          <form onSubmit={handleSubmit} className="relative flex items-center bg-white/80 backdrop-blur-xl rounded-[2.5rem] p-2 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] ring-1 ring-brand-dark/5 focus-within:ring-brand-red/20 transition-all">
+          <div className="relative flex items-center bg-white/80 backdrop-blur-xl rounded-[2.5rem] p-2 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] ring-1 ring-brand-dark/5 focus-within:ring-brand-red/20 transition-all">
             <Search className="ml-6 h-6 w-6 text-muted-foreground/40" />
             <Input 
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              disabled={isLoading}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleSubmit();
+              }}
               placeholder="Make a customer support app that summarizes tickets and drafts replies" 
               className="border-none bg-transparent h-16 text-lg focus-visible:ring-0 placeholder:text-muted-foreground/40"
+              disabled={isLoading}
             />
-            <Button disabled={isLoading || !prompt.trim()} type="submit" size="icon" className="h-14 w-14 rounded-full bg-brand-red hover:bg-brand-red/90 disabled:opacity-50 text-white shrink-0 shadow-lg shadow-brand-red/20 transition-transform active:scale-95">
+            <Button 
+              size="icon" 
+              onClick={handleSubmit}
+              disabled={isLoading || !inputValue.trim()}
+              className="h-14 w-14 rounded-full bg-brand-red hover:bg-brand-red/90 text-white shrink-0 shadow-lg shadow-brand-red/20 transition-transform active:scale-95"
+            >
               {isLoading ? <Loader2 className="h-7 w-7 animate-spin" /> : <ArrowRight className="h-7 w-7" />}
             </Button>
-          </form>
+          </div>
 
           <motion.div 
             initial={{ opacity: 0 }}
@@ -67,12 +76,12 @@ export function HeroSection({ onSendMessage, isLoading }: HeroSectionProps) {
             transition={{ delay: 0.6, duration: 1 }}
             className="mt-10 flex flex-wrap justify-center gap-4"
           >
-            {["Reporting Dashboard", "E-com Platform", "Onboarding Portal"].map((tag, i) => (
+            {["Reporting Dashboard", "E-com Platform", "Onboarding Portal"].map((tag) => (
               <motion.button 
                 key={tag}
                 onClick={() => {
-                  setPrompt(tag);
-                  if (onSendMessage && !isLoading) onSendMessage(tag);
+                  setInputValue(tag);
+                  if (onSendMessage) onSendMessage(tag);
                 }}
                 disabled={isLoading}
                 whileHover={{ y: -2, scale: 1.02 }}

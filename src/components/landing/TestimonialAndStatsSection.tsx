@@ -169,7 +169,7 @@ export function TestimonialAndStatsSection() {
               </Button>
               <Button 
                 variant="outline" 
-                className="rounded-full px-12 py-8 text-[11px] font-black uppercase tracking-[0.2em] border-white/20 text-white hover:bg-white/10"
+                className="rounded-full px-12 py-8 text-[11px] font-black uppercase tracking-[0.2em] border-white/60 text-white bg-black hover:bg-black hover:text-white"
               >
                 Schedule Demo
               </Button>

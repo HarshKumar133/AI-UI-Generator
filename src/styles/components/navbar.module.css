@@ -4,7 +4,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 var(--space-xl);
-  background: rgba(9, 9, 11, 0.75);
+  background: var(--color-bg-glass-medium);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--color-border);
@@ -20,7 +20,7 @@
   left: 10%;
   right: 10%;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.10), transparent);
+  background: linear-gradient(90deg, transparent, rgba(218, 79, 47, 0.18), transparent);
   pointer-events: none;
 }
 

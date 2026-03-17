@@ -9,7 +9,7 @@ const GeneratedUI = dynamic(
     () => import('@/generated/GeneratedUI').catch(() => {
         return {
             default: () => (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#09090b', color: '#f87171', fontFamily: 'system-ui', fontSize: '0.85rem', flexDirection: 'column', gap: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#fffdf9', color: '#d43d31', fontFamily: 'system-ui', fontSize: '0.85rem', flexDirection: 'column', gap: 12 }}>
                     <div style={{ fontSize: '1.5rem' }}>⚠️</div>
                     <div>Component failed to load — check for syntax errors.</div>
                 </div>
@@ -19,7 +19,7 @@ const GeneratedUI = dynamic(
     {
         ssr: false,
         loading: () => (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#09090b', color: '#6b7280', fontFamily: 'system-ui', fontSize: '0.85rem', gap: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#fffdf9', color: '#8a7e72', fontFamily: 'system-ui', fontSize: '0.85rem', gap: 10 }}>
                 <span>Compiling…</span>
             </div>
         ),
@@ -41,7 +41,7 @@ export default function PreviewPage() {
     }, []);
 
     return (
-        <div style={{ minHeight: '100vh', background: '#09090b', color: '#eceff2' }}>
+        <div style={{ minHeight: '100vh', background: '#fffdf9', color: '#15120f' }}>
             <GeneratedUI key={renderKey} />
         </div>
     );

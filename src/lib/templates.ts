@@ -98,7 +98,7 @@ import { Navbar, Card, Stat, Chart, Progress, Table, Badge } from '@/components/
 
 export default function GeneratedUI() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#09090b' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#fffdf9' }}>
       <Navbar brand="📊 DataSense AI" items={[{ label: 'Overview', href: '#', active: true }, { label: 'Reports', href: '#' }, { label: 'Users', href: '#' }, { label: 'Settings', href: '#' }]} actions={[{ label: '✨ New Report', variant: 'primary' }]} />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '20px', padding: '24px' }}>
         <Card title="💰 Total Revenue" subtitle="Last 30 days performance">

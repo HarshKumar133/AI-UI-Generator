@@ -22,6 +22,9 @@ import {
   Zap,
   LucideIcon,
   ArrowRight,
+  AlertTriangle,
+  KeyRound,
+  RefreshCw,
 } from 'lucide-react';
 
 // Map template icon names to Lucide components
@@ -88,6 +91,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
   const formatTime = (timestamp: string) =>
     new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const lastUserPrompt = [...messages].reverse().find(m => m.role === 'user')?.content;
 
   const suggestions = [
     { icon: BarChart3, label: 'Analytics Dashboard', color: 'emerald' },
@@ -216,34 +220,78 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           /* ── Message List ── */
           <>
             {messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={`${styles.message} ${msg.role === 'user' ? styles.messageUser : styles.messageAssistant}`}
-              >
-                {msg.role === 'assistant' && (
-                  <div className={styles.messageAvatar}>
-                    <Bot size={16} />
+              (() => {
+                const isErrorMessage = msg.role === 'assistant' && /^Error:/i.test(msg.content);
+                const isQuotaMessage = isErrorMessage && /(quota|api key)/i.test(msg.content);
+                const cleanedContent = msg.content.replace(/^Error:\s*/i, '');
+
+                return (
+                  <div
+                    key={msg.id}
+                    className={`${styles.message} ${msg.role === 'user' ? styles.messageUser : styles.messageAssistant}`}
+                  >
+                    {msg.role === 'assistant' && (
+                      <div className={styles.messageAvatar}>
+                        {isErrorMessage ? <AlertTriangle size={16} /> : <Bot size={16} />}
+                      </div>
+                    )}
+                    <div className={`${styles.messageBubble} ${isErrorMessage ? styles.messageBubbleError : ''}`}>
+                      {isErrorMessage ? cleanedContent : msg.content}
+                    </div>
+
+                    {isErrorMessage && (
+                      <div className={styles.errorHelpCard}>
+                        <div className={styles.errorHelpTitle}>
+                          {isQuotaMessage ? <KeyRound size={13} /> : <AlertTriangle size={13} />}
+                          {isQuotaMessage ? 'Generation paused: API quota reached' : 'Generation failed'}
+                        </div>
+                        <div className={styles.errorHelpHint}>
+                          {isQuotaMessage
+                            ? 'Add a fresh API key in your environment, then retry your last prompt.'
+                            : 'Retry with a simpler prompt or load a template to continue building.'}
+                        </div>
+                        <div className={styles.errorHelpActions}>
+                          {lastUserPrompt && (
+                            <button
+                              className={styles.errorActionBtn}
+                              onClick={() => onSendMessage(lastUserPrompt)}
+                              disabled={isLoading}
+                            >
+                              <RefreshCw size={12} />
+                              Retry
+                            </button>
+                          )}
+                          <button
+                            className={styles.errorActionBtnGhost}
+                            onClick={() => setShowTemplates(true)}
+                          >
+                            <Layout size={12} />
+                            Open Templates
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {msg.role === 'assistant' && msg.generationResult?.explanation && (
+                      <div className={styles.explanation}>
+                        <div className={styles.explanationTitle}>
+                          <Brain size={13} className={styles.reasoningIcon} />
+                          AI REASONING
+                        </div>
+                        <div className={styles.explanationText}>
+                          {msg.generationResult.explanation.explanation}
+                        </div>
+                        <div className={styles.componentTags}>
+                          {msg.generationResult.generation.componentList.map((comp) => (
+                            <span key={comp} className={styles.componentTag}>{comp}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <span className={styles.messageTime}>{formatTime(msg.timestamp)}</span>
                   </div>
-                )}
-                <div className={styles.messageBubble}>{msg.content}</div>
-                {msg.role === 'assistant' && msg.generationResult?.explanation && (
-                  <div className={styles.explanation}>
-                    <div className={styles.explanationTitle}>
-                      <Brain size={13} className={styles.reasoningIcon} />
-                      AI REASONING
-                    </div>
-                    <div className={styles.explanationText}>
-                      {msg.generationResult.explanation.explanation}
-                    </div>
-                    <div className={styles.componentTags}>
-                      {msg.generationResult.generation.componentList.map((comp) => (
-                        <span key={comp} className={styles.componentTag}>{comp}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                <span className={styles.messageTime}>{formatTime(msg.timestamp)}</span>
-              </div>
+                );
+              })()
             ))}
           </>
         )}
@@ -262,19 +310,19 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
               {/* Agent Progress Status */}
               {activeAgents.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '12px' }}>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Parallel Agents</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px', background: 'rgba(218,79,47,0.06)', border: '1px solid rgba(21,18,15,0.08)', borderRadius: '12px', padding: '12px' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#766f66', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Parallel Agents</div>
                   {activeAgents.map(agent => (
                     <div key={agent.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem' }}>
                       {agent.status === 'working' ? (
-                        <div style={{ width: '14px', height: '14px', borderRadius: '50%', border: '2px solid rgba(59,130,246,0.3)', borderTopColor: '#3b82f6', animation: 'spin 1s linear infinite' }} />
+                        <div style={{ width: '14px', height: '14px', borderRadius: '50%', border: '2px solid rgba(218,79,47,0.25)', borderTopColor: '#da4f2f', animation: 'spin 1s linear infinite' }} />
                       ) : agent.status === 'done' ? (
-                        <span style={{ color: '#10b981' }}>✓</span>
+                        <span style={{ color: '#2f9e63' }}>✓</span>
                       ) : (
-                        <span style={{ color: '#ef4444' }}>⚠</span>
+                        <span style={{ color: '#d43d31' }}>⚠</span>
                       )}
-                      <span style={{ fontWeight: 500, color: agent.status === 'done' ? '#9ca3af' : '#e5e7eb' }}>{agent.name}</span>
-                      <span style={{ color: '#6b7280', fontSize: '0.75rem', marginLeft: 'auto', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '120px' }}>{agent.message}</span>
+                      <span style={{ fontWeight: 500, color: agent.status === 'done' ? '#766f66' : '#15120f' }}>{agent.name}</span>
+                      <span style={{ color: '#8a7e72', fontSize: '0.75rem', marginLeft: 'auto', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '120px' }}>{agent.message}</span>
                     </div>
                   ))}
                   <style>{`@keyframes spin { 100% { transform: rotate(360deg); } }`}</style>

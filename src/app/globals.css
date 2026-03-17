@@ -1,259 +1,182 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap');
 @import "tailwindcss";
+@config "../../tailwind.config.ts";
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   Tailwind v4 Design Tokens — Brand + Shadcn-compatible
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-@theme inline {
-  /* Container sizing */
-  --container-3xs: 16rem;
-  --container-2xs: 18rem;
-  --container-xs: 20rem;
-  --container-sm: 24rem;
-  --container-md: 28rem;
-  --container-lg: 32rem;
-  --container-xl: 36rem;
-  --container-2xl: 42rem;
-  --container-3xl: 48rem;
-  --container-4xl: 56rem;
-  --container-5xl: 64rem;
-  --container-6xl: 72rem;
-  --container-7xl: 80rem;
 
-  /* Brand palette (landing page) */
-  --color-brand-red: oklch(55% 0.17 28);
-  --color-brand-red-light: oklch(65% 0.17 28);
-  --color-brand-cream: oklch(93% 0.04 75);
-  --color-brand-dark: oklch(10% 0.005 0);
 
-  /* Shadcn-compat semantic tokens (light) */
-  --color-background: oklch(100% 0 0);
-  --color-foreground: oklch(10% 0.005 0);
-  --color-muted: oklch(96% 0 0);
-  --color-muted-foreground: oklch(45% 0.005 0);
-  --color-border: oklch(92% 0 0);
-  --color-input: oklch(92% 0 0);
-  --color-ring: oklch(55% 0.17 28);
-  --color-primary: oklch(55% 0.17 28);
-  --color-primary-foreground: oklch(100% 0 0);
-  --color-secondary: oklch(93% 0.04 75);
-  --color-secondary-foreground: oklch(10% 0.005 0);
-  --color-accent: oklch(93% 0.04 75);
-  --color-accent-foreground: oklch(55% 0.17 28);
-  --color-destructive: oklch(55% 0.22 27);
-  --color-destructive-foreground: oklch(100% 0 0);
-  --color-card: oklch(100% 0 0);
-  --color-card-foreground: oklch(10% 0.005 0);
-  --color-popover: oklch(100% 0 0);
-  --color-popover-foreground: oklch(10% 0.005 0);
 
-  /* Sidebar tokens */
-  --color-sidebar: oklch(98% 0 0);
-  --color-sidebar-foreground: oklch(30% 0.01 240);
-  --color-sidebar-primary: oklch(15% 0.01 240);
-  --color-sidebar-primary-foreground: oklch(98% 0 0);
-  --color-sidebar-accent: oklch(95% 0.005 240);
-  --color-sidebar-accent-foreground: oklch(15% 0.01 240);
-  --color-sidebar-border: oklch(90% 0.005 220);
-  --color-sidebar-ring: oklch(62% 0.17 217);
 
-  /* Border radius */
-  --radius: 0.25rem;
-  --radius-sm: calc(var(--radius) - 2px);
-  --radius-md: calc(var(--radius) + 2px);
-  --radius-lg: calc(var(--radius) + 4px);
-  --radius-xl: calc(var(--radius) + 8px);
-  --radius-2xl: calc(var(--radius) + 16px);
-  --radius-full: 9999px;
+@layer base {
+  /**
+   * Tailwind CSS theme
+   * tailwind.config.ts expects the following color variables to be expressed as HSL values.
+   * A different format will require also updating the theme in tailwind.config.ts.
+  */
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 4%;
 
-  /* Fonts */
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 4%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 4%;
+
+    --primary: 10 71% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 42 54% 91%;
+    --secondary-foreground: 0 0% 4%;
+
+    --muted: 0 0% 96.1%;
+    --muted-foreground: 0 0% 42%;
+
+    --accent: 42 54% 91%;
+    --accent-foreground: 10 71% 50%;
+
+    --brand-red: 10 71% 50%;
+    --brand-cream: 42 54% 91%;
+    --brand-dark: 0 0% 4%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 89.8%;
+    --input: 0 0% 89.8%;
+    --ring: 10 71% 50%;
+
+    --radius: 0.25rem;
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Shared Workspace Design Tokens (Landing-aligned) */
+    --font-sans: "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    --font-mono: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+
+    --space-xs: 0.25rem;
+    --space-sm: 0.5rem;
+    --space-md: 0.75rem;
+    --space-lg: 1rem;
+    --space-xl: 1.5rem;
+    --space-2xl: 2rem;
+
+    --radius-xs: 0.25rem;
+    --radius-sm: 0.375rem;
+    --radius-md: 0.625rem;
+    --radius-lg: 0.875rem;
+    --radius-xl: 1.25rem;
+    --radius-2xl: 1.75rem;
+    --radius-full: 9999px;
+
+    --transition-fast: 160ms cubic-bezier(0.2, 0, 0, 1);
+    --transition-normal: 240ms cubic-bezier(0.2, 0, 0, 1);
+
+    --color-bg-primary: #fffdf9;
+    --color-bg-secondary: #fffaf4;
+    --color-bg-tertiary: #f9f0e7;
+    --color-bg-card: rgba(255, 255, 255, 0.94);
+    --color-bg-elevated: rgba(255, 255, 255, 0.98);
+    --color-bg-glass-light: rgba(255, 255, 255, 0.74);
+    --color-bg-glass-medium: rgba(255, 255, 255, 0.88);
+
+    --color-text-primary: #15120f;
+    --color-text-secondary: #433d37;
+    --color-text-muted: #766f66;
+
+    --color-border: rgba(21, 18, 15, 0.11);
+    --color-border-subtle: rgba(21, 18, 15, 0.06);
+    --color-border-hover: rgba(218, 79, 47, 0.3);
+    --color-border-focus: rgba(218, 79, 47, 0.45);
+    --color-border-active: rgba(218, 79, 47, 0.5);
+
+    --color-accent-primary: #da4f2f;
+    --color-accent-secondary: #f07a60;
+    --color-accent-tertiary: #c43c20;
+    --color-accent-bright: #ff6f47;
+    --color-accent-surface: rgba(218, 79, 47, 0.11);
+    --color-accent-gradient: linear-gradient(135deg, #da4f2f 0%, #f07a60 100%);
+    --color-accent-gradient-soft: linear-gradient(135deg, rgba(218, 79, 47, 0.14) 0%, rgba(240, 122, 96, 0.12) 100%);
+
+    --color-success: #2f9e63;
+    --color-error: #d43d31;
+    --color-error-glow: rgba(212, 61, 49, 0.12);
+    --color-blue: #3f82d8;
+
+    --shadow-card: 0 10px 32px rgba(65, 43, 24, 0.08);
+    --shadow-card-hover: 0 22px 48px rgba(65, 43, 24, 0.14);
+    --shadow-input-focus: 0 0 0 4px rgba(218, 79, 47, 0.14);
+    --shadow-xl: 0 28px 70px rgba(38, 26, 18, 0.2);
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
 }
 
-:root {
-  /* ---- Color System: Emerald Dark Premium ---- */
-  --color-bg-primary: #09090b;
-  --color-bg-secondary: #0c0e12;
-  --color-bg-tertiary: #12161c;
-  --color-bg-elevated: #181d25;
-  --color-bg-hover: #1e2530;
-  --color-bg-glass: rgba(12, 14, 18, 0.80);
-  --color-bg-glass-light: rgba(255, 255, 255, 0.03);
-  --color-bg-glass-medium: rgba(255, 255, 255, 0.05);
-  --color-bg-card: rgba(18, 22, 28, 0.65);
-  --color-bg-card-hover: rgba(24, 29, 37, 0.8);
+@layer base {
+  * {
+    @apply border-border;
+  }
 
-  /* Text */
-  --color-text-primary: #f0f2f5;
-  --color-text-secondary: #8b96a5;
-  --color-text-muted: #4a5568;
-  --color-text-accent: #34d399;
+  body {
+    @apply bg-background text-foreground;
+  }
 
-  /* Accent: Emerald / Teal */
-  --color-accent-primary: #10b981;
-  --color-accent-secondary: #059669;
-  --color-accent-tertiary: #34d399;
-  --color-accent-bright: #6ee7b7;
-  --color-accent-glow: rgba(16, 185, 129, 0.08);
-  --color-accent-glow-strong: rgba(16, 185, 129, 0.18);
-  --color-accent-surface: rgba(16, 185, 129, 0.06);
-  --color-accent-gradient: linear-gradient(135deg, #10b981 0%, #059669 50%, #0d9488 100%);
-  --color-accent-gradient-soft: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(5, 150, 105, 0.06) 100%);
+  :where(p, span, li, h1, h2, h3, h4, h5, h6, a, button, label, td, th) {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
 
-  /* Secondary Accent: Blue */
-  --color-blue: #3b82f6;
-  --color-blue-glow: rgba(59, 130, 246, 0.10);
-
-  /* Status */
-  --color-success: #22c55e;
-  --color-success-glow: rgba(34, 197, 94, 0.10);
-  --color-warning: #f59e0b;
-  --color-warning-glow: rgba(245, 158, 11, 0.10);
-  --color-error: #ef4444;
-  --color-error-glow: rgba(239, 68, 68, 0.10);
-  --color-info: #3b82f6;
-  --color-info-glow: rgba(59, 130, 246, 0.10);
-
-  /* Borders */
-  --color-border: rgba(255, 255, 255, 0.06);
-  --color-border-hover: rgba(255, 255, 255, 0.10);
-  --color-border-focus: rgba(16, 185, 129, 0.30);
-  --color-border-subtle: rgba(255, 255, 255, 0.03);
-
-  /* Typography */
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
-
-  /* Spacing */
-  --space-xs: 4px;
-  --space-sm: 8px;
-  --space-md: 16px;
-  --space-lg: 24px;
-  --space-xl: 32px;
-  --space-2xl: 48px;
-  --space-3xl: 64px;
-
-  /* Border Radius — large & round like Base44 */
-  --radius-xs: 6px;
-  --radius-sm: 8px;
-  --radius-md: 14px;
-  --radius-lg: 20px;
-  --radius-xl: 28px;
-  --radius-2xl: 36px;
-  --radius-full: 9999px;
-
-  /* Shadows */
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.15);
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.20);
-  --shadow-md: 0 4px 24px rgba(0, 0, 0, 0.25);
-  --shadow-lg: 0 12px 48px rgba(0, 0, 0, 0.35);
-  --shadow-xl: 0 24px 64px rgba(0, 0, 0, 0.45);
-  --shadow-glow: 0 0 40px rgba(16, 185, 129, 0.06);
-  --shadow-glow-strong: 0 0 60px rgba(16, 185, 129, 0.14);
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.04);
-  --shadow-card-hover: 0 8px 32px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.06);
-  --shadow-input-focus: 0 0 0 3px rgba(16, 185, 129, 0.08), 0 0 20px rgba(16, 185, 129, 0.04);
-
-  /* Transitions */
-  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-spring: 350ms cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-html,
-body {
-  height: 100%;
-  font-family: var(--font-sans);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
-}
-
-/* Thin scrollbar */
-::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.06);
-  border-radius: var(--radius-full);
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.12);
-}
-
-::selection {
-  background: rgba(16, 185, 129, 0.3);
-  color: white;
-}
-
-a {
-  color: var(--color-accent-primary);
-  text-decoration: none;
-  transition: color var(--transition-fast);
-}
-
-a:hover {
-  color: var(--color-accent-tertiary);
-}
-
-code {
-  font-family: var(--font-mono);
-  font-size: 0.85em;
-  background: var(--color-accent-surface);
-  color: var(--color-accent-tertiary);
-  padding: 2px 7px;
-  border-radius: var(--radius-sm);
-}
-
-/* Utility: focus ring */
-.focus-ring:focus-visible {
-  outline: 2px solid var(--color-accent-primary);
-  outline-offset: 2px;
-}
-
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  border: 0;
-}
-
-/* ─── Landing Page Section Container ──────────────────────────────────────────
-   Tailwind v4 PostCSS: mx-auto utility doesn't produce margin:auto reliably.
-   Use this class on inner wrapper divs in all landing sections.
-   ──────────────────────────────────────────────────────────────────────────── */
-.section-container {
-  width: 100%;
-  max-width: 80rem;
-  /* 1280px = 7xl */
-  margin-left: auto;
-  margin-right: auto;
-  padding-left: 1.5rem;
-  padding-right: 1.5rem;
-}
-
-@media (min-width: 1024px) {
-  .section-container {
-    padding-left: 2rem;
-    padding-right: 2rem;
+  pre,
+  code {
+    overflow-x: auto;
+    white-space: pre;
   }
 }
