@@ -1,5 +1,75 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;450;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap');
 @import "tailwindcss";
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Tailwind v4 Design Tokens — Brand + Shadcn-compatible
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+@theme inline {
+  /* Container sizing */
+  --container-3xs: 16rem;
+  --container-2xs: 18rem;
+  --container-xs: 20rem;
+  --container-sm: 24rem;
+  --container-md: 28rem;
+  --container-lg: 32rem;
+  --container-xl: 36rem;
+  --container-2xl: 42rem;
+  --container-3xl: 48rem;
+  --container-4xl: 56rem;
+  --container-5xl: 64rem;
+  --container-6xl: 72rem;
+  --container-7xl: 80rem;
+
+  /* Brand palette (landing page) */
+  --color-brand-red: oklch(55% 0.17 28);
+  --color-brand-red-light: oklch(65% 0.17 28);
+  --color-brand-cream: oklch(93% 0.04 75);
+  --color-brand-dark: oklch(10% 0.005 0);
+
+  /* Shadcn-compat semantic tokens (light) */
+  --color-background: oklch(100% 0 0);
+  --color-foreground: oklch(10% 0.005 0);
+  --color-muted: oklch(96% 0 0);
+  --color-muted-foreground: oklch(45% 0.005 0);
+  --color-border: oklch(92% 0 0);
+  --color-input: oklch(92% 0 0);
+  --color-ring: oklch(55% 0.17 28);
+  --color-primary: oklch(55% 0.17 28);
+  --color-primary-foreground: oklch(100% 0 0);
+  --color-secondary: oklch(93% 0.04 75);
+  --color-secondary-foreground: oklch(10% 0.005 0);
+  --color-accent: oklch(93% 0.04 75);
+  --color-accent-foreground: oklch(55% 0.17 28);
+  --color-destructive: oklch(55% 0.22 27);
+  --color-destructive-foreground: oklch(100% 0 0);
+  --color-card: oklch(100% 0 0);
+  --color-card-foreground: oklch(10% 0.005 0);
+  --color-popover: oklch(100% 0 0);
+  --color-popover-foreground: oklch(10% 0.005 0);
+
+  /* Sidebar tokens */
+  --color-sidebar: oklch(98% 0 0);
+  --color-sidebar-foreground: oklch(30% 0.01 240);
+  --color-sidebar-primary: oklch(15% 0.01 240);
+  --color-sidebar-primary-foreground: oklch(98% 0 0);
+  --color-sidebar-accent: oklch(95% 0.005 240);
+  --color-sidebar-accent-foreground: oklch(15% 0.01 240);
+  --color-sidebar-border: oklch(90% 0.005 220);
+  --color-sidebar-ring: oklch(62% 0.17 217);
+
+  /* Border radius */
+  --radius: 0.25rem;
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: calc(var(--radius) + 2px);
+  --radius-lg: calc(var(--radius) + 4px);
+  --radius-xl: calc(var(--radius) + 8px);
+  --radius-2xl: calc(var(--radius) + 16px);
+  --radius-full: 9999px;
+
+  /* Fonts */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+}
 
 :root {
   /* ---- Color System: Emerald Dark Premium ---- */
@@ -102,8 +172,6 @@ html,
 body {
   height: 100%;
   font-family: var(--font-sans);
-  background-color: var(--color-bg-primary);
-  color: var(--color-text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
@@ -167,4 +235,25 @@ code {
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
   border: 0;
+}
+
+/* ─── Landing Page Section Container ──────────────────────────────────────────
+   Tailwind v4 PostCSS: mx-auto utility doesn't produce margin:auto reliably.
+   Use this class on inner wrapper divs in all landing sections.
+   ──────────────────────────────────────────────────────────────────────────── */
+.section-container {
+  width: 100%;
+  max-width: 80rem;
+  /* 1280px = 7xl */
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+@media (min-width: 1024px) {
+  .section-container {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
 }

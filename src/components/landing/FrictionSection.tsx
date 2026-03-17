@@ -56,13 +56,13 @@ const features = [
 export function FrictionSection() {
   return (
     <section className="py-32 bg-white overflow-hidden">
-      <div className="container mx-auto px-4">
-        <motion.div 
+      <div className="section-container">
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.8 }}
-          className="text-center mb-32"
+          className="flex flex-col items-center text-center mb-32"
         >
           <span className="inline-block px-3 py-1 bg-brand-cream text-brand-dark/40 text-[10px] font-black uppercase tracking-[0.2em] rounded-full mb-8">
             STORY SYSTEM / OPERATING SHIFT
@@ -77,8 +77,8 @@ export function FrictionSection() {
 
         <div className="space-y-48">
           {features.map((feature, idx) => (
-            <motion.div 
-              key={idx} 
+            <motion.div
+              key={idx}
               initial={{ opacity: 0, y: 40 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-100px" }}
@@ -107,7 +107,7 @@ export function FrictionSection() {
                 {feature.art}
 
                 {/* Metric Badge Overlay */}
-                <motion.div 
+                <motion.div
                   initial={{ x: 20, opacity: 0 }}
                   whileInView={{ x: 0, opacity: 1 }}
                   transition={{ delay: 0.5, duration: 0.6 }}
@@ -116,18 +116,18 @@ export function FrictionSection() {
                     "rounded-tl-[4rem] backdrop-blur-xl bg-brand-dark/95"
                   )}
                 >
-                   <div className="flex justify-between items-baseline mb-3">
-                     <span className="text-[10px] font-black tracking-[0.2em] uppercase opacity-40 leading-none">
-                       {feature.metricLabel}
-                     </span>
-                     <span className="text-[10px] font-black tracking-[0.2em] uppercase opacity-20 leading-none">
-                       {feature.metricSub}
-                     </span>
-                   </div>
-                   <div className="text-6xl font-black tracking-tighter leading-none mb-1">
-                     {feature.metric}
-                   </div>
-                   <div className="h-1 w-12 bg-brand-red rounded-full mt-4" />
+                  <div className="flex justify-between items-baseline mb-3">
+                    <span className="text-[10px] font-black tracking-[0.2em] uppercase opacity-40 leading-none">
+                      {feature.metricLabel}
+                    </span>
+                    <span className="text-[10px] font-black tracking-[0.2em] uppercase opacity-20 leading-none">
+                      {feature.metricSub}
+                    </span>
+                  </div>
+                  <div className="text-6xl font-black tracking-tighter leading-none mb-1">
+                    {feature.metric}
+                  </div>
+                  <div className="h-1 w-12 bg-brand-red rounded-full mt-4" />
                 </motion.div>
               </div>
             </motion.div>

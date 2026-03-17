@@ -3,22 +3,23 @@
 import React from 'react';
 import { ComponentNode, ComponentType } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Table } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Modal } from '@/components/ui/modal';
 import { Sidebar } from '@/components/ui/sidebar';
 import { Navbar } from '@/components/ui/navbar';
-import { Chart } from '@/components/ui/chart';
+import { ChartContainer as Chart } from '@/components/ui/chart';
 import { Badge } from '@/components/ui/badge';
-import { Avatar } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { Stat } from '@/components/ui/stat';
-import { Alert } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Toggle } from '@/components/ui/toggle';
-import { Tabs } from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Divider } from '@/components/ui/divider';
-import { Select } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyComponent = React.FC<any>;

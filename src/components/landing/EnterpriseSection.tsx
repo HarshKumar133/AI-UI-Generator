@@ -6,7 +6,7 @@ export function EnterpriseSection() {
     <section className="py-32 bg-brand-dark text-white border-t border-white/5 relative overflow-hidden">
       <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-brand-red/40 to-transparent" />
       
-      <div className="container mx-auto px-4 relative z-10">
+      <div className="section-container relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-24 items-center">
           <motion.div 
             initial={{ opacity: 0, x: -30 }}
