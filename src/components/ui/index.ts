@@ -12,7 +12,7 @@ export { Sidebar } from './sidebar';
 
 export { Navbar } from './navbar';
 
-export { Chart } from './chart';
+export { ChartContainer as Chart, ChartTooltip, ChartTooltipContent } from './chart';
 
 export { Badge } from './badge';
 

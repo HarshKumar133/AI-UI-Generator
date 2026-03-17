@@ -7,7 +7,7 @@ export function ShowcaseSection() {
     <section className="py-32 bg-brand-dark text-white overflow-hidden relative">
       <div className="absolute inset-0 bg-gradient-to-b from-brand-dark via-brand-dark/95 to-brand-dark pointer-events-none" />
 
-      <div className="section-container text-center relative z-10">
+      <div className="container mx-auto px-4 text-center relative z-10">
         <motion.span
           initial={{ opacity: 0, scale: 0.9 }}
           whileInView={{ opacity: 1, scale: 1 }}
@@ -75,7 +75,7 @@ export function ShowcaseSection() {
               className="absolute top-1/4 -left-8 w-32 h-32 bg-brand-red/20 blur-2xl rounded-full"
             />
           </motion.div>
-
+          
           {/* Steps Row */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-1 mt-4 rounded-[3rem] overflow-hidden border border-white/5 bg-white/[0.02]">
             {[
@@ -95,8 +95,8 @@ export function ShowcaseSection() {
                 bg: "bg-white/5"
               }
             ].map((item, idx) => (
-              <motion.div
-                key={idx}
+              <motion.div 
+                key={idx} 
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 + idx * 0.1 }}

@@ -46,17 +46,17 @@ export function PricingSection() {
     <section className="py-32 bg-brand-dark text-white overflow-hidden relative">
       <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-brand-red/10 blur-[180px] -z-0 pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-brand-red/5 blur-[200px] -z-0 pointer-events-none" />
-
-      <div className="section-container relative z-10 text-center">
-        <motion.span
+      
+      <div className="container mx-auto px-4 relative z-10 text-center">
+        <motion.span 
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40 mb-10 block"
         >
           PRICING
         </motion.span>
-
-        <motion.h2
+        
+        <motion.h2 
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
@@ -64,8 +64,8 @@ export function PricingSection() {
         >
           Choose your operating cadence, then scale with zero replatforming.
         </motion.h2>
-
-        <motion.p
+        
+        <motion.p 
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           transition={{ delay: 0.2, duration: 1 }}
@@ -76,41 +76,41 @@ export function PricingSection() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl mx-auto items-end">
           {plans.map((plan, idx) => (
-            <motion.div
-              key={idx}
+            <motion.div 
+              key={idx} 
               initial={{ opacity: 0, y: 40 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: idx * 0.1 }}
               whileHover={{ y: -8 }}
-              className={`relative p-12 lg:p-16 rounded-[3.5rem] flex flex-col items-start text-left border ${plan.featured
-                  ? "bg-brand-red border-brand-red shadow-[0_48px_80px_-16px_rgba(217,66,37,0.3)] z-20"
-                  : "bg-white/[0.03] border-white/10 hover:border-white/20 transition-all backdrop-blur-xl"
-                }`}
+              className={`relative p-12 lg:p-16 rounded-[3.5rem] flex flex-col items-start text-left border ${
+                plan.featured 
+                ? "bg-brand-red border-brand-red shadow-[0_48px_80px_-16px_rgba(217,66,37,0.3)] z-20" 
+                : "bg-white/[0.03] border-white/10 hover:border-white/20 transition-all backdrop-blur-xl"
+              }`}
             >
               {plan.featured && (
                 <div className="absolute -top-5 left-1/2 -translate-x-1/2 bg-white text-brand-red text-[11px] font-black uppercase tracking-[0.2em] px-6 py-2 rounded-full shadow-2xl">
                   MOST POPULAR
                 </div>
               )}
-
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40 mb-6">
+              
+              <div className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40 mb-8">
                 {plan.name}
               </div>
 
-              <div className="relative w-full mb-6 flex items-start gap-2">
-                <span className={`text-2xl font-black mt-3 ${plan.featured ? "text-white/50" : "text-white/30"}`}>$</span>
+              <div className="mb-8 flex items-start gap-1">
+                <span className={`text-3xl font-black mt-3 ${plan.featured ? "text-white/40" : "text-white/20"}`}>$</span>
                 <motion.span
                   initial={{ y: 20, opacity: 0 }}
                   whileInView={{ y: 0, opacity: 1 }}
-                  className="text-[72px] md:text-[96px] font-black leading-[0.9] tracking-tighter block"
+                  className="text-[80px] md:text-[110px] font-black leading-none tracking-tighter"
                 >
                   {plan.price}
                 </motion.span>
               </div>
-
               <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40 mb-12">{plan.description}</p>
-
+              
               <ul className="space-y-6 mb-16 flex-1 w-full">
                 {plan.features.map((feature, fIdx) => (
                   <li key={fIdx} className="flex items-center gap-4 text-base font-bold tracking-tight">
@@ -121,16 +121,17 @@ export function PricingSection() {
                   </li>
                 ))}
               </ul>
-
-              <motion.div
+              
+              <motion.div 
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 className="w-full"
               >
-                <Button className={`w-full py-9 rounded-[2rem] text-[11px] font-black uppercase tracking-[0.2em] transition-all shadow-xl ${plan.featured
-                    ? "bg-white text-brand-red hover:bg-white/90 shadow-brand-red/20"
-                    : "bg-white/10 text-white hover:bg-white/20 border border-white/5 backdrop-blur-xl"
-                  }`}>
+                <Button className={`w-full py-9 rounded-[2rem] text-[11px] font-black uppercase tracking-[0.2em] transition-all shadow-xl ${
+                  plan.featured 
+                  ? "bg-white text-brand-red hover:bg-white/90 shadow-brand-red/20" 
+                  : "bg-white/10 text-white hover:bg-white/20 border border-white/5 backdrop-blur-xl"
+                }`}>
                   {plan.buttonText}
                 </Button>
               </motion.div>

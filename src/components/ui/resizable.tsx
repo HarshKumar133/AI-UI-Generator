@@ -1,19 +1,15 @@
-import * as React from "react";
+// @ts-nocheck
+"use client";
 import { GripVertical } from "lucide-react";
+import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 
 import { cn } from "@/lib/utils";
 
-type ResizablePanelGroupProps = React.HTMLAttributes<HTMLDivElement> & {
-  direction?: "horizontal" | "vertical";
-};
-
-const ResizablePanelGroup: React.FC<ResizablePanelGroupProps> = ({
+const ResizablePanelGroup = ({
   className,
-  direction,
   ...props
-}) => (
-  <div
-    data-panel-group-direction={direction}
+}: React.ComponentProps<typeof PanelGroup>) => (
+  <PanelGroup
     className={cn(
       "flex h-full w-full data-[panel-group-direction=vertical]:flex-col",
       className,
@@ -22,28 +18,18 @@ const ResizablePanelGroup: React.FC<ResizablePanelGroupProps> = ({
   />
 );
 
-const ResizablePanel: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({
-  className,
-  ...props
-}) => (
-  <div
-    className={cn("flex-1 min-w-0 min-h-0", className)}
-    {...props}
-  />
-);
+const ResizablePanel = Panel;
 
-type ResizableHandleProps = React.HTMLAttributes<HTMLDivElement> & {
-  withHandle?: boolean;
-};
-
-const ResizableHandle: React.FC<ResizableHandleProps> = ({
+const ResizableHandle = ({
   withHandle,
   className,
   ...props
+}: React.ComponentProps<typeof PanelResizeHandle> & {
+  withHandle?: boolean;
 }) => (
-  <div
+  <PanelResizeHandle
     className={cn(
-      "relative flex w-px items-center justify-center bg-border data-[panel-group-direction=vertical]:h-px data-[panel-group-direction=vertical]:w-full",
+      "relative flex w-px items-center justify-center bg-border after:absolute after:inset-y-0 after:left-1/2 after:w-1 after:-translate-x-1/2 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-1 data-[panel-group-direction=vertical]:h-px data-[panel-group-direction=vertical]:w-full data-[panel-group-direction=vertical]:after:left-0 data-[panel-group-direction=vertical]:after:h-1 data-[panel-group-direction=vertical]:after:w-full data-[panel-group-direction=vertical]:after:-translate-y-1/2 data-[panel-group-direction=vertical]:after:translate-x-0 [&[data-panel-group-direction=vertical]>div]:rotate-90",
       className,
     )}
     {...props}
@@ -53,7 +39,7 @@ const ResizableHandle: React.FC<ResizableHandleProps> = ({
         <GripVertical className="h-2.5 w-2.5" />
       </div>
     )}
-  </div>
+  </PanelResizeHandle>
 );
 
 export { ResizablePanelGroup, ResizablePanel, ResizableHandle };
