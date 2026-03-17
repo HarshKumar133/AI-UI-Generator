@@ -4,7 +4,7 @@
 // References layout and component choices
 // ============================================
 
-import { PlannerOutput, GeneratorOutput, ExplainerOutput } from '@/types';
+import { PlannerOutput, GeneratorOutput, ExplainerOutput, GenerationMode, GenerationTarget } from '@/types';
 import { callGemini } from './geminiClient';
 
 // ---- PROMPT TEMPLATE (Hard-coded, visible in code as required) ----
@@ -33,19 +33,47 @@ OUTPUT FORMAT (strict JSON, no markdown, no code fences):
 
 Return ONLY the JSON, nothing else.`;
 
+const CREATIVE_EXPLAINER_SYSTEM_PROMPT = `You are the EXPLAINER agent for a creative multi-target app builder.
+
+Explain decisions in plain English with emphasis on:
+1. Product UX strategy and visual direction
+2. Why selected libraries/tools fit the target platform
+3. How motion/interaction choices improve usability
+
+Return strict JSON:
+{
+  "explanation": "2-4 sentence summary",
+  "componentChoices": [
+    { "component": "library/component/screen", "reason": "why selected" }
+  ],
+  "layoutReason": "why this structure fits the target use case"
+}
+`;
+
+interface ExplainerRunOptions {
+    mode?: GenerationMode;
+    target?: GenerationTarget;
+}
+
 // ---- EXPLAINER FUNCTION ----
 
 export async function runExplainer(
     userPrompt: string,
     plan: PlannerOutput,
-    generation: GeneratorOutput
+    generation: GeneratorOutput,
+    options: ExplainerRunOptions = {}
 ): Promise<ExplainerOutput> {
+    const mode = options.mode ?? generation.metadata?.mode ?? 'creative';
+    const target = options.target ?? generation.metadata?.target ?? plan.target ?? 'web';
     const userMessage = `The user requested: "${userPrompt}"
 
 The Planner chose:
 - Layout: "${plan.layout}"
 - Components: ${generation.componentList.join(', ')}
 - Planner reasoning: "${plan.reasoning}"
+- Target: "${target}"
+- Design brief: "${plan.designBrief || 'N/A'}"
+- Motion plan: ${(plan.motionPlan || []).join(' | ') || 'N/A'}
 
 The Generator produced code using these components: ${generation.componentList.join(', ')}
 
@@ -53,7 +81,10 @@ Explain the decisions made. Why was this layout chosen? Why was each component s
 
 Output ONLY the JSON explanation, no other text.`;
 
-    const response = await callGemini(userMessage, EXPLAINER_SYSTEM_PROMPT);
+    const response = await callGemini(
+        userMessage,
+        mode === 'deterministic' ? EXPLAINER_SYSTEM_PROMPT : CREATIVE_EXPLAINER_SYSTEM_PROMPT
+    );
 
     // Clean the response
     let cleanResponse = response.trim();
@@ -86,7 +117,7 @@ Output ONLY the JSON explanation, no other text.`;
         console.error('Explainer JSON parse error:', error);
 
         return {
-            explanation: `Generated a ${plan.layout} layout using ${generation.componentList.join(', ')} components based on your request: "${userPrompt}".`,
+            explanation: `Generated a ${target} ${plan.layout} layout using ${generation.componentList.join(', ')} based on your request: "${userPrompt}".`,
             componentChoices: generation.componentList.map(comp => ({
                 component: comp,
                 reason: `Selected to fulfill the requested UI functionality.`,

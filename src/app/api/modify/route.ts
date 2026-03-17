@@ -25,13 +25,17 @@ export async function POST(request: NextRequest) {
             prompt: body.prompt,
             currentCode: body.currentCode,
             currentVersion: body.currentVersion || 0,
+            generationMode: body.generationMode,
+            targetPreference: body.targetPreference,
+            previousTarget: body.previousTarget,
+            previousMode: body.previousMode,
             previousLayout: body.previousLayout,
             previousComponentList: body.previousComponentList,
         });
 
         addVersion({
             version: result.version,
-            code: result.generation.code,
+            code: result.generation.primaryCode || result.generation.code,
             prompt: result.userPrompt,
             plan: result.plan,
             explanation: result.explanation,

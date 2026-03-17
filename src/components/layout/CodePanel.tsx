@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import styles from '@/styles/components/codePanel.module.css';
-import { ComponentType } from '@/types';
 import {
   FileCode2,
   Copy,
@@ -15,7 +14,7 @@ import {
 
 interface CodePanelProps {
   code: string;
-  componentList: ComponentType[];
+  componentList: string[];
   onCodeChange?: (code: string) => void;
 }
 

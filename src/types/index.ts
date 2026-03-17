@@ -2,6 +2,10 @@
 // Core Types for Deterministic UI Generator
 // ============================================
 
+export type GenerationMode = 'creative' | 'deterministic';
+export type GenerationTarget = 'web' | 'expo-rn';
+export type TargetPreference = 'auto' | 'web' | 'expo-rn' | 'android' | 'ios' | 'mobile' | 'native';
+
 // The fixed set of allowed components - AI cannot create new ones
 export type ComponentType =
   | 'Button'
@@ -58,16 +62,50 @@ export interface PlannerBlock {
 
 // Output of the Planner agent
 export interface PlannerOutput {
-  layout: 'single-column' | 'two-column' | 'sidebar-layout' | 'dashboard' | 'centered' | 'full-width';
+  layout:
+    | 'single-column'
+    | 'two-column'
+    | 'sidebar-layout'
+    | 'dashboard'
+    | 'centered'
+    | 'full-width'
+    | 'landing-page'
+    | 'form-page'
+    | 'app-shell';
   blocks?: PlannerBlock[]; // NEW: UI broken down into independent blocks
   components?: ComponentNode[]; // For backwards capability with existing templates
   reasoning: string;
+  target?: GenerationTarget;
+  designBrief?: string;
+  wireframePlan?: string[];
+  motionPlan?: string[];
+  libraryPlan?: { name: string; reason: string; category?: string }[];
+  implementationPlan?: string[];
+}
+
+export interface PreviewArtifact {
+  kind: 'html';
+  content: string;
+  title?: string;
+  description?: string;
+}
+
+export interface GenerationMetadata {
+  mode: GenerationMode;
+  target: GenerationTarget;
+  runtime: 'nextjs' | 'html' | 'expo-rn';
+  selectedLibraries: string[];
 }
 
 // Output of the Generator agent
 export interface GeneratorOutput {
+  // Backward-compatible field expected by existing UI/state/store
   code: string;
-  componentList: ComponentType[];
+  // New canonical output for multi-target generation
+  primaryCode?: string;
+  componentList: string[];
+  previewArtifact?: PreviewArtifact;
+  metadata?: GenerationMetadata;
 }
 
 // Output of the Explainer agent
@@ -82,6 +120,7 @@ export interface GenerationResult {
   plan: PlannerOutput;
   generation: GeneratorOutput;
   explanation: ExplainerOutput;
+  metadata?: GenerationMetadata;
   version: number;
   timestamp: string;
   userPrompt: string;
@@ -109,12 +148,18 @@ export interface VersionEntry {
 // API request types
 export interface GenerateRequest {
   prompt: string;
+  generationMode?: GenerationMode;
+  targetPreference?: TargetPreference;
 }
 
 export interface ModifyRequest {
   prompt: string;
   currentCode: string;
   currentVersion: number;
+  generationMode?: GenerationMode;
+  targetPreference?: TargetPreference;
+  previousTarget?: GenerationTarget;
+  previousMode?: GenerationMode;
 }
 
 export interface RollbackRequest {
@@ -152,7 +197,7 @@ export interface GenerationEvent {
   agentId?: string; // id of the block or agent executing (e.g., "sidebar")
   agentName?: string; // human readable name (e.g., "Sidebar Agent")
   message: string;
-  data?: any; // Partial data payload (e.g., the block plan, or the final result)
+  data?: unknown; // Partial data payload (e.g., the block plan, or the final result)
 }
 
 export interface AgentEventState {

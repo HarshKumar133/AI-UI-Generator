@@ -6,6 +6,12 @@ interface LivePreviewProps {
   code: string;
   outputMode?: 'tsx' | 'html' | 'nextjs'; // 'nextjs' = /preview route via Next.js native compilation
   title?: string;
+  downloadPayload?: {
+    filename: string;
+    content: string;
+    mimeType?: string;
+    label?: string;
+  };
 }
 
 
@@ -341,7 +347,7 @@ const Tabs = ({ items = [], activeTab: controlled, onChange }) => {
 
 /** Build TSX-mode iframe HTML (Babel transpiles the TSX code) */
 function buildIframeHTML(code: string): string {
-  let transformedCode = code
+  const transformedCode = code
     .replace(/'use client';\s*/g, '')
     .replace(/"use client";\s*/g, '')
     .replace(/import React.*?from ['"]react['"];?\s*/g, '')
@@ -391,7 +397,7 @@ function buildDirectHTML(html: string): string {
 
 // ── LivePreview Component ──
 
-const LivePreview: React.FC<LivePreviewProps> = ({ code, outputMode = 'tsx', title }) => {
+const LivePreview: React.FC<LivePreviewProps> = ({ code, outputMode = 'tsx', title, downloadPayload }) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -401,7 +407,6 @@ const LivePreview: React.FC<LivePreviewProps> = ({ code, outputMode = 'tsx', tit
   // We send a postMessage to trigger a remount inside the /preview page.
   useEffect(() => {
     if (outputMode === 'nextjs') {
-      setLoading(false);
       // Give Turbopack a moment to detect the file change, then signal reload
       const timer = setTimeout(() => {
         iframeRef.current?.contentWindow?.postMessage({ type: 'RELOAD_PREVIEW' }, '*');
@@ -410,32 +415,11 @@ const LivePreview: React.FC<LivePreviewProps> = ({ code, outputMode = 'tsx', tit
     }
   }, [code, outputMode]);
 
-  if (outputMode === 'nextjs') {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', minHeight: 300 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', borderBottom: '1px solid rgba(21,18,15,0.09)', flexShrink: 0, background: 'rgba(250,240,231,0.72)' }}>
-          <span style={{ fontSize: '0.62rem', color: '#da4f2f', background: 'rgba(218,79,47,0.1)', border: '1px solid rgba(218,79,47,0.2)', borderRadius: 5, padding: '2px 7px', fontWeight: 700, letterSpacing: '0.06em' }}>⚙ NEXT.JS</span>
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
-            <button onClick={() => window.open('/preview', '_blank')} style={{ padding: '3px 10px', borderRadius: 6, border: '1px solid rgba(21,18,15,0.1)', background: 'rgba(21,18,15,0.08)', color: '#766f66', cursor: 'pointer', fontSize: '0.7rem', fontFamily: 'inherit' }}>
-              ↗ Open
-            </button>
-          </div>
-        </div>
-        <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
-          <iframe
-            ref={iframeRef}
-            src="/preview"
-            title="Next.js Live Preview"
-            style={{ width: '100%', height: '100%', border: 'none', display: 'block', minHeight: 300 }}
-          />
-        </div>
-      </div>
-    );
-  }
-
-
-
   const render = useCallback(() => {
+    if (outputMode === 'nextjs') {
+      return;
+    }
+
     const iframe = iframeRef.current;
     if (!iframe || !code) return;
 
@@ -472,7 +456,22 @@ const LivePreview: React.FC<LivePreviewProps> = ({ code, outputMode = 'tsx', tit
     return () => window.removeEventListener('message', handleMessage);
   }, [code, outputMode]);
 
-  useEffect(() => { render(); }, [render]);
+  useEffect(() => {
+    if (outputMode === 'nextjs') {
+      return;
+    }
+    let cleanup: void | (() => void);
+    const timer = window.setTimeout(() => {
+      cleanup = render();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timer);
+      if (typeof cleanup === 'function') {
+        cleanup();
+      }
+    };
+  }, [render, outputMode]);
 
   const handleOpenTab = useCallback(() => {
     const html = outputMode === 'html' ? buildDirectHTML(code) : buildIframeHTML(code);
@@ -481,15 +480,39 @@ const LivePreview: React.FC<LivePreviewProps> = ({ code, outputMode = 'tsx', tit
   }, [code, outputMode]);
 
   const handleDownload = useCallback(() => {
-    const html = outputMode === 'html' ? buildDirectHTML(code) : buildIframeHTML(code);
-    const blob = new Blob([html], { type: 'text/html' });
+    const payloadContent = downloadPayload?.content || (outputMode === 'html' ? buildDirectHTML(code) : buildIframeHTML(code));
+    const payloadType = downloadPayload?.mimeType || 'text/html';
+    const blob = new Blob([payloadContent], { type: payloadType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${(title || 'app').toLowerCase().replace(/\s+/g, '-')}.html`;
+    a.download = downloadPayload?.filename || `${(title || 'app').toLowerCase().replace(/\s+/g, '-')}.html`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-  }, [code, outputMode, title]);
+  }, [code, outputMode, title, downloadPayload]);
+
+  if (outputMode === 'nextjs') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', minHeight: 300 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', borderBottom: '1px solid rgba(21,18,15,0.09)', flexShrink: 0, background: 'rgba(250,240,231,0.72)' }}>
+          <span style={{ fontSize: '0.62rem', color: '#da4f2f', background: 'rgba(218,79,47,0.1)', border: '1px solid rgba(218,79,47,0.2)', borderRadius: 5, padding: '2px 7px', fontWeight: 700, letterSpacing: '0.06em' }}>⚙ NEXT.JS</span>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
+            <button onClick={() => window.open('/preview', '_blank')} style={{ padding: '3px 10px', borderRadius: 6, border: '1px solid rgba(21,18,15,0.1)', background: 'rgba(21,18,15,0.08)', color: '#766f66', cursor: 'pointer', fontSize: '0.7rem', fontFamily: 'inherit' }}>
+              ↗ Open
+            </button>
+          </div>
+        </div>
+        <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
+          <iframe
+            ref={iframeRef}
+            src="/preview"
+            title="Next.js Live Preview"
+            style={{ width: '100%', height: '100%', border: 'none', display: 'block', minHeight: 300 }}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', minHeight: 300 }}>
@@ -502,9 +525,9 @@ const LivePreview: React.FC<LivePreviewProps> = ({ code, outputMode = 'tsx', tit
           <button onClick={handleOpenTab} style={{ padding: '3px 10px', borderRadius: 6, border: '1px solid rgba(21,18,15,0.1)', background: 'rgba(21,18,15,0.08)', color: '#766f66', cursor: 'pointer', fontSize: '0.7rem', fontFamily: 'inherit' }} title="Open in new tab">
             ↗ Open
           </button>
-          {outputMode === 'html' && (
-            <button onClick={handleDownload} style={{ padding: '3px 10px', borderRadius: 6, border: '1px solid rgba(218,79,47,0.25)', background: 'rgba(218,79,47,0.08)', color: '#da4f2f', cursor: 'pointer', fontSize: '0.7rem', fontFamily: 'inherit' }} title="Download HTML">
-              ↓ Download
+          {(outputMode === 'html' || !!downloadPayload) && (
+            <button onClick={handleDownload} style={{ padding: '3px 10px', borderRadius: 6, border: '1px solid rgba(218,79,47,0.25)', background: 'rgba(218,79,47,0.08)', color: '#da4f2f', cursor: 'pointer', fontSize: '0.7rem', fontFamily: 'inherit' }} title={downloadPayload?.label || 'Download'}>
+              {downloadPayload?.label || '↓ Download'}
             </button>
           )}
         </div>

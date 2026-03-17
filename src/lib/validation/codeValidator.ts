@@ -1,10 +1,12 @@
 // ============================================
 // CODE VALIDATOR
-// Validates AI-generated code for safety and
-// adherence to the deterministic component rules
+// Mode-aware safety + quality checks:
+// - deterministic mode keeps strict component constraints
+// - creative mode allows broader libraries with safety guardrails
 // ============================================
 
 import { COMPONENT_SCHEMA, ComponentType } from './componentRegistry';
+import { GenerationMode, GenerationTarget } from '@/types';
 
 export interface ValidationResult {
   isValid: boolean;
@@ -13,25 +15,31 @@ export interface ValidationResult {
   componentCount: number;
 }
 
-const PROHIBITED_PATTERNS = [
-  { pattern: /style\s*=\s*\{/g, message: 'Inline styles detected on components (only layout wrappers allowed)' },
-  { pattern: /import.*from\s+['"](?!react|@\/components\/ui)/g, message: 'External/unauthorized imports detected' },
+export interface ValidationOptions {
+  mode?: GenerationMode;
+  target?: GenerationTarget;
+}
+
+const HARD_SECURITY_RULES = [
   { pattern: /eval\s*\(/g, message: 'eval() usage detected — security risk' },
   { pattern: /dangerouslySetInnerHTML/g, message: 'dangerouslySetInnerHTML detected — security risk' },
-  { pattern: /document\.(cookie|write)/g, message: 'Direct DOM manipulation detected — security risk' },
-  { pattern: /window\.(location|open)/g, message: 'Window navigation detected — security risk' },
-  { pattern: /fetch\s*\(|axios|XMLHttpRequest/g, message: 'Network requests in generated code — security risk' },
-  { pattern: /localStorage|sessionStorage/g, message: 'Storage API usage detected — security risk' },
   { pattern: /innerHTML\s*=/g, message: 'innerHTML assignment detected — security risk' },
+  { pattern: /document\.(cookie|write)/g, message: 'Direct DOM cookie/write usage detected — security risk' },
   { pattern: /<script/gi, message: 'Script tag detected — security risk' },
+];
+
+const RUNTIME_MISMATCH_RULES = [
+  { pattern: /from\s+['"](?:fs|path|child_process|worker_threads|net|tls|dgram|os)['"]/g, message: 'Node-only module import detected in generated client code' },
+  { pattern: /require\(['"](?:fs|path|child_process|worker_threads|net|tls|dgram|os)['"]\)/g, message: 'Node-only require() detected in generated client code' },
 ];
 
 const REQUIRED_PATTERNS = [
   { pattern: /export\s+default/, message: 'Missing default export' },
-  { pattern: /function\s+GeneratedUI|const\s+GeneratedUI/, message: 'Missing GeneratedUI function name' },
 ];
 
-export function validateGeneratedCode(code: string): ValidationResult {
+export function validateGeneratedCode(code: string, options: ValidationOptions = {}): ValidationResult {
+  const mode: GenerationMode = options.mode ?? 'creative';
+  const target: GenerationTarget = options.target ?? 'web';
   const errors: string[] = [];
   const warnings: string[] = [];
 
@@ -39,32 +47,42 @@ export function validateGeneratedCode(code: string): ValidationResult {
     return { isValid: false, errors: ['Generated code is empty'], warnings: [], componentCount: 0 };
   }
 
-  // Check for prohibited patterns
-  for (const { pattern, message } of PROHIBITED_PATTERNS) {
-    pattern.lastIndex = 0; // Reset regex state
+  for (const { pattern, message } of HARD_SECURITY_RULES) {
+    pattern.lastIndex = 0;
     if (pattern.test(code)) {
-      // Inline styles on layout wrapper divs are acceptable
-      if (message.includes('Inline styles') && /style\s*=\s*\{\s*\{[^}]*(?:display|flex|grid|gap|padding|margin|width|height|align|justify)/g.test(code)) {
-        warnings.push(`${message} (layout wrappers may be acceptable)`);
-      } else if (message.includes('security risk')) {
-        errors.push(message);
-      } else {
-        warnings.push(message);
-      }
+      errors.push(message);
     }
   }
 
-  // Check required patterns
-  for (const { pattern, message } of REQUIRED_PATTERNS) {
-    if (!pattern.test(code)) {
+  for (const { pattern, message } of RUNTIME_MISMATCH_RULES) {
+    pattern.lastIndex = 0;
+    if (pattern.test(code)) {
+      errors.push(message);
+    }
+  }
+
+  // Inline styles are allowed in creative mode and partially allowed in deterministic mode.
+  const hasInlineStyles = /style\s*=\s*\{/.test(code);
+  if (hasInlineStyles) {
+    if (mode === 'deterministic') {
+      warnings.push('Inline styles detected (layout wrappers are acceptable, component-level styling should be minimized).');
+    }
+  }
+
+  const importSources = extractImportSources(code);
+  const unauthorizedImports = importSources.filter((source) => !isImportAllowed(source, mode, target));
+  if (unauthorizedImports.length > 0) {
+    const message = `Unauthorized imports detected: ${unauthorizedImports.join(', ')}`;
+    if (mode === 'deterministic') {
       warnings.push(message);
+    } else {
+      warnings.push(`${message} (creative mode allows broad libraries, but review compatibility).`);
     }
   }
 
-  // Count and validate component usage
+  // Stronger deterministic checks: fixed component set validation
   const allowedComponents = Object.keys(COMPONENT_SCHEMA) as ComponentType[];
   let componentCount = 0;
-
   for (const comp of allowedComponents) {
     const regex = new RegExp(`<${comp}[\\s/>]`, 'g');
     const matches = code.match(regex);
@@ -73,28 +91,40 @@ export function validateGeneratedCode(code: string): ValidationResult {
     }
   }
 
-  // Check for unknown components (JSX tags not in allowed list and not HTML)
-  const jsxTagRegex = /<([A-Z][a-zA-Z]*)/g;
-  let match;
-  const usedComponents = new Set<string>();
-  while ((match = jsxTagRegex.exec(code)) !== null) {
-    usedComponents.add(match[1]);
+  if (mode === 'deterministic') {
+    const jsxTagRegex = /<([A-Z][a-zA-Z]*)/g;
+    let match: RegExpExecArray | null = null;
+    const usedComponents = new Set<string>();
+    while ((match = jsxTagRegex.exec(code)) !== null) {
+      usedComponents.add(match[1]);
+    }
+
+    const deterministicExceptions = new Set(['React', 'Fragment', 'GeneratedUI']);
+    for (const tag of usedComponents) {
+      if (!allowedComponents.includes(tag as ComponentType) && !deterministicExceptions.has(tag)) {
+        errors.push(`Unknown component used: <${tag}>. Only allowed: ${allowedComponents.join(', ')}`);
+      }
+    }
+
+    if (componentCount === 0) {
+      warnings.push('No allowed components detected in code');
+    }
+  } else if (target === 'web' && componentCount === 0) {
+    warnings.push('No internal UI-kit components detected (acceptable in creative mode if external UI libraries are intentional).');
   }
 
-  const htmlLikeTags = new Set(['React', 'Fragment', 'GeneratedUI']);
-  for (const tag of usedComponents) {
-    if (!allowedComponents.includes(tag as ComponentType) && !htmlLikeTags.has(tag)) {
-      errors.push(`Unknown component used: <${tag}>. Only allowed: ${allowedComponents.join(', ')}`);
+  for (const { pattern, message } of REQUIRED_PATTERNS) {
+    if (!pattern.test(code)) {
+      warnings.push(message);
     }
   }
 
-  if (componentCount === 0) {
-    warnings.push('No allowed components detected in code');
+  if (target === 'web' && !/function\s+GeneratedUI|const\s+GeneratedUI/.test(code)) {
+    warnings.push('Missing GeneratedUI function name for web preview compatibility');
   }
 
-  // Check code length (sanity check)
-  if (code.length > 50000) {
-    errors.push('Generated code exceeds maximum length (50KB)');
+  if (code.length > 100000) {
+    errors.push('Generated code exceeds maximum length (100KB)');
   }
 
   return {
@@ -103,4 +133,33 @@ export function validateGeneratedCode(code: string): ValidationResult {
     warnings,
     componentCount,
   };
+}
+
+function extractImportSources(code: string): string[] {
+  const regex = /^\s*import[\s\S]*?from\s+['"]([^'"]+)['"];?/gm;
+  const sources = new Set<string>();
+  let match: RegExpExecArray | null = null;
+  while ((match = regex.exec(code)) !== null) {
+    if (match[1]) sources.add(match[1]);
+  }
+  return Array.from(sources);
+}
+
+function isImportAllowed(source: string, mode: GenerationMode, target: GenerationTarget): boolean {
+  if (source === 'react' || source.startsWith('@/')) {
+    return true;
+  }
+
+  if (mode === 'deterministic') {
+    return source === '@/components/ui';
+  }
+
+  // Creative mode:
+  // - Web: broad allowance (block only Node runtime imports via explicit mismatch checks).
+  // - Expo: allow broad packages + react-native ecosystem.
+  if (target === 'expo-rn') {
+    return true;
+  }
+
+  return true;
 }

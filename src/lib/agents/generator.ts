@@ -4,7 +4,16 @@
 // Uses allowed components + HTML layout tags
 // ============================================
 
-import { PlannerOutput, GeneratorOutput, ComponentType, PlannerBlock, GenerationEvent } from '@/types';
+import {
+  PlannerOutput,
+  GeneratorOutput,
+  ComponentType,
+  PlannerBlock,
+  GenerationEvent,
+  GenerationMode,
+  GenerationTarget,
+  PreviewArtifact,
+} from '@/types';
 import { callGemini } from './geminiClient';
 import { getComponentDescriptions } from '../validation';
 
@@ -16,8 +25,14 @@ const ALL_COMPONENTS: ComponentType[] = [
   'Tabs', 'Divider', 'Select',
 ];
 
+export interface GeneratorRunOptions {
+  mode?: GenerationMode;
+  target?: GenerationTarget;
+}
+
 // ---- PEAK-QUALITY PROMPT TEMPLATE ----
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const GENERATOR_SYSTEM_PROMPT = `You are the GENERATOR agent. Your output becomes real code rendered live in a browser preview panel.
 
 MISSION: Generate STUNNING, PREMIUM, PRODUCTION-QUALITY React/TSX UI. Every output must look like it belongs on Dribbble or a funded startup's product. Surprise and delight — no basic UI.
@@ -180,6 +195,43 @@ Return ONLY valid TSX code.
 Start with: 'use client';
 No markdown fences. No extra explanation. Just code.`;
 
+const CREATIVE_WEB_GENERATOR_SYSTEM_PROMPT = `You are a senior UI/UX engineer building premium SaaS web experiences.
+
+Your output is production-ready Next.js/React TSX code.
+
+Rules:
+- Output ONLY TSX code (no markdown, no fences).
+- First line: 'use client';
+- Default export must be function GeneratedUI.
+- You may use any appropriate UI/UX libraries (animation, charts, forms, data viz, etc), but prefer React-native implementation patterns that run without extra package installation for baseline preview compatibility.
+- Keep imports explicit and valid when used.
+- Prefer composable patterns and modern responsive layout.
+- Include thoughtful motion/interaction states (hover, loading, transitions).
+- Prioritize accessibility and keyboard/semantic correctness.
+
+Design baseline:
+- Light premium SaaS visual tone (cream/white surfaces, refined shadows, strong typography).
+- Accent interactions using brand-red style highlights.
+- Avoid generic placeholder UI; use realistic product content and data.
+`;
+
+const CREATIVE_EXPO_GENERATOR_SYSTEM_PROMPT = `You are a senior React Native + Expo app engineer.
+
+Generate a high-quality mobile app code bundle for Android/iOS using Expo.
+
+Rules:
+- Output plain text code only, no markdown fences.
+- Use this exact multi-file format:
+  // FILE: App.tsx
+  ...code...
+  // FILE: screens/HomeScreen.tsx
+  ...code...
+- Include at least App.tsx and 2 additional files (screens/components).
+- Use Expo-friendly libraries when needed (expo-router optional, react-native-reanimated optional, etc).
+- Add polished motion and interaction behavior suitable for SaaS apps.
+- Keep content realistic, UX-focused, and implementation-ready.
+`;
+
 // ---- SYSTEM PROMPT FOR INDIVIDUAL BLOCKS ----
 
 const BLOCK_GENERATOR_SYSTEM_PROMPT = `You are a UI BLOCK GENERATOR agent. Your job is to strictly build ONE piece of a larger UI.
@@ -321,29 +373,39 @@ ${getLayoutGuidance(plan.layout)}`;
   return code;
 }
 
-export async function runGenerator(plan: PlannerOutput, onEvent?: (e: GenerationEvent) => void): Promise<GeneratorOutput> {
-  // Fallback for non-streaming usage (uses standard linear pipeline backwards compatibility if needed)
+export async function runGenerator(
+  plan: PlannerOutput,
+  onEvent?: (e: GenerationEvent) => void,
+  options: GeneratorRunOptions = {}
+): Promise<GeneratorOutput> {
+  const mode = options.mode ?? 'creative';
+  const target = options.target ?? plan.target ?? 'web';
+
+  if (mode === 'deterministic') {
+    return runDeterministicGenerator(plan, onEvent);
+  }
+
+  return runCreativeGenerator(plan, target, onEvent);
+}
+
+async function runDeterministicGenerator(plan: PlannerOutput, onEvent?: (e: GenerationEvent) => void): Promise<GeneratorOutput> {
   if (!plan.blocks || plan.blocks.length === 0) {
-    throw new Error("Plan has no blocks");
+    throw new Error('Plan has no blocks');
   }
 
   const blockResults = await Promise.all(
-    plan.blocks.map(block => runBlockGenerator(block, plan.layout, onEvent))
+    plan.blocks.map((block) => runBlockGenerator(block, plan.layout, onEvent))
   );
 
-  const blockNames = plan.blocks.map(b => b.id.split('-').map(part => part.charAt(0).toUpperCase() + part.slice(1)).join('') + 'Block');
+  const blockNames = plan.blocks.map((b) => b.id.split('-').map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join('') + 'Block');
   const shellCode = await runShellGenerator(plan, blockNames, onEvent);
 
-  // Stitch them together
   let finalCode = shellCode;
-
-  // Collect all unique component imports needed across all blocks and shell
   const allUsedComponents = new Set<ComponentType>();
-  extractUsedComponents(shellCode).forEach(c => allUsedComponents.add(c));
+  extractUsedComponents(shellCode).forEach((c) => allUsedComponents.add(c));
 
   const blockCodes = blockResults.map((r, i) => {
-    r.components.forEach(c => allUsedComponents.add(c));
-    // Remove individual imports from blocks as well as 'use client'
+    r.components.forEach((c) => allUsedComponents.add(c));
     let cleanBlock = r.code
       .replace(/['"`]?use client['"`]?;?\n?/ig, '')
       .replace(/export default [A-Za-z0-9_]+;?\n?/g, '')
@@ -353,19 +415,13 @@ export async function runGenerator(plan: PlannerOutput, onEvent?: (e: Generation
     return `// --- Block: ${blockNames[i]} ---\n${cleanBlock}`;
   });
 
-  // Inject central imports at the top
   const importLine = allUsedComponents.size > 0
     ? `import { ${Array.from(allUsedComponents).join(', ')} } from '@/components/ui';\n`
     : '';
 
-  // Replace shell's UI imports with unified ones, then append the blocks above the default export
   finalCode = finalCode.replace(/import {[^}]+} from ['"]@\/components\/ui['"];?\n?/g, '');
-
-  // Strip any existing 'use client' to prevent duplicates, then prepend cleanly
   finalCode = finalCode.replace(/['"`]?use client['"`]?;?\n?/ig, '');
-  // Also remove redundant React imports from the shell
   finalCode = finalCode.replace(/import React[^;]*;?\n?/g, '');
-
   finalCode = `'use client';\n// @ts-nocheck\nimport React from 'react';\n${importLine}\n${finalCode.trim()}`;
 
   const exportMatch = finalCode.match(/export default function GeneratedUI/);
@@ -375,7 +431,298 @@ export async function runGenerator(plan: PlannerOutput, onEvent?: (e: Generation
     finalCode += '\n\n' + blockCodes.join('\n\n');
   }
 
-  return { code: finalCode, componentList: Array.from(allUsedComponents) };
+  return {
+    code: finalCode,
+    primaryCode: finalCode,
+    componentList: Array.from(allUsedComponents),
+    metadata: {
+      mode: 'deterministic',
+      target: 'web',
+      runtime: 'nextjs',
+      selectedLibraries: ['react', '@/components/ui'],
+    },
+  };
+}
+
+async function runCreativeGenerator(
+  plan: PlannerOutput,
+  target: GenerationTarget,
+  onEvent?: (e: GenerationEvent) => void
+): Promise<GeneratorOutput> {
+  if (onEvent) {
+    onEvent({
+      type: 'agent_start',
+      agentId: 'creative-generator',
+      agentName: 'Creative Generator',
+      message: `Generating ${target === 'expo-rn' ? 'Expo React Native' : 'web'} implementation...`,
+    });
+  }
+
+  const primaryCode = target === 'expo-rn'
+    ? await generateCreativeExpoCode(plan)
+    : await generateCreativeWebCode(plan);
+
+  const selectedLibraries = extractImportSources(primaryCode);
+  const metadata = {
+    mode: 'creative' as const,
+    target,
+    runtime: target === 'expo-rn' ? ('expo-rn' as const) : ('nextjs' as const),
+    selectedLibraries,
+  };
+
+  const previewArtifact = target === 'expo-rn' ? buildExpoPreviewArtifact(plan, selectedLibraries) : undefined;
+
+  if (onEvent) {
+    onEvent({
+      type: 'agent_done',
+      agentId: 'creative-generator',
+      agentName: 'Creative Generator',
+      message: `Generated ${target === 'expo-rn' ? 'Expo bundle + mobile preview artifact' : 'web app code'}`,
+    });
+  }
+
+  return {
+    code: primaryCode,
+    primaryCode,
+    componentList: selectedLibraries,
+    previewArtifact,
+    metadata,
+  };
+}
+
+async function generateCreativeWebCode(plan: PlannerOutput): Promise<string> {
+  const userMessage = `Build the app described by this creative plan.
+
+Target: web
+Layout hint: ${plan.layout}
+Reasoning: ${plan.reasoning}
+Design brief: ${plan.designBrief || 'Premium SaaS product experience'}
+Wireframe plan:
+${(plan.wireframePlan || []).map((line, i) => `${i + 1}. ${line}`).join('\n') || '- Build a polished app shell with clear hierarchy'}
+Motion plan:
+${(plan.motionPlan || []).map((line, i) => `${i + 1}. ${line}`).join('\n') || '- Add meaningful micro-interactions'}
+Library plan:
+${(plan.libraryPlan || []).map((lib) => `- ${lib.name}: ${lib.reason}`).join('\n') || '- choose best-fit libraries'}
+Implementation plan:
+${(plan.implementationPlan || []).map((line, i) => `${i + 1}. ${line}`).join('\n') || '- build production-ready UI'}
+
+Preview compatibility requirement:
+- Prefer implementation that runs with React + local code without requiring package installs.
+
+Output only TSX code for GeneratedUI.`;
+
+  const response = await callGemini(userMessage, CREATIVE_WEB_GENERATOR_SYSTEM_PROMPT);
+  const code = stripCodeFences(response);
+  return ensureGeneratedUIExports(code, 'tsx');
+}
+
+async function generateCreativeExpoCode(plan: PlannerOutput): Promise<string> {
+  const userMessage = `Build an Expo React Native code bundle from this plan.
+
+Target: expo-rn
+Reasoning: ${plan.reasoning}
+Design brief: ${plan.designBrief || 'Premium SaaS mobile app'}
+Wireframe plan:
+${(plan.wireframePlan || []).map((line, i) => `${i + 1}. ${line}`).join('\n') || '- home screen + detail screen + settings screen'}
+Motion plan:
+${(plan.motionPlan || []).map((line, i) => `${i + 1}. ${line}`).join('\n') || '- animated transitions and button feedback'}
+Library plan:
+${(plan.libraryPlan || []).map((lib) => `- ${lib.name}: ${lib.reason}`).join('\n') || '- choose best-fit expo libraries'}
+Implementation plan:
+${(plan.implementationPlan || []).map((line, i) => `${i + 1}. ${line}`).join('\n') || '- create reusable components and screens'}
+
+Output a multi-file bundle using // FILE: path markers.`;
+
+  const response = await callGemini(userMessage, CREATIVE_EXPO_GENERATOR_SYSTEM_PROMPT);
+  const code = stripCodeFences(response);
+  return ensureExpoBundleShape(code);
+}
+
+function stripCodeFences(content: string): string {
+  const trimmed = content.trim();
+  if (!trimmed.startsWith('`')) {
+    return trimmed;
+  }
+  return trimmed.replace(/^`{3}(?:tsx?|jsx?|typescript|javascript|json)?\s*\n?/, '').replace(/\n?`{3}\s*$/, '');
+}
+
+function ensureGeneratedUIExports(code: string, kind: 'tsx' | 'expo'): string {
+  let normalized = code.trim();
+  if (kind === 'tsx') {
+    if (!normalized.startsWith("'use client'") && !normalized.startsWith('"use client"')) {
+      normalized = `'use client';\n${normalized}`;
+    }
+    if (!/export\s+default\s+function\s+GeneratedUI|export\s+default\s+GeneratedUI/.test(normalized)) {
+      if (/function\s+GeneratedUI\s*\(/.test(normalized)) {
+        normalized = normalized.replace(/function\s+GeneratedUI\s*\(/, 'export default function GeneratedUI(');
+      } else {
+        normalized += '\n\nexport default function GeneratedUI() { return null; }\n';
+      }
+    }
+  }
+  return normalized;
+}
+
+function ensureExpoBundleShape(code: string): string {
+  let normalized = code.trim();
+  if (!/^\/\/\s*FILE:/m.test(normalized)) {
+    normalized = `// FILE: App.tsx\n${normalized}`;
+  }
+  return ensureGeneratedUIExports(normalized, 'expo');
+}
+
+function buildExpoPreviewArtifact(plan: PlannerOutput, selectedLibraries: string[]): PreviewArtifact {
+  const wireframes = (plan.wireframePlan && plan.wireframePlan.length > 0)
+    ? plan.wireframePlan
+    : ['Home dashboard with summary cards', 'Details screen with list + filters', 'Settings and profile preferences'];
+  const motions = (plan.motionPlan && plan.motionPlan.length > 0)
+    ? plan.motionPlan
+    : ['Screen fade/slide transition', 'Card lift interaction', 'Loading shimmer and success toast'];
+
+  const wireframeItems = wireframes.slice(0, 5).map((item) => `<li>${escapeHtml(item)}</li>`).join('');
+  const motionItems = motions.slice(0, 4).map((item) => `<li>${escapeHtml(item)}</li>`).join('');
+  const libItems = selectedLibraries.length > 0
+    ? selectedLibraries.slice(0, 6).map((item) => `<span class="chip">${escapeHtml(item)}</span>`).join('')
+    : '<span class="chip">expo</span><span class="chip">react-native</span>';
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Expo Mobile Preview Artifact</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, sans-serif;
+      color: #15120f;
+      background:
+        radial-gradient(circle at 14% 12%, rgba(218,79,47,0.14), transparent 44%),
+        radial-gradient(circle at 82% 88%, rgba(240,122,96,0.12), transparent 40%),
+        #fffaf4;
+      padding: 28px;
+    }
+    .frame {
+      width: min(390px, 92vw);
+      border-radius: 30px;
+      padding: 14px;
+      background: linear-gradient(180deg, #111 0%, #222 100%);
+      box-shadow: 0 32px 70px rgba(39, 24, 14, 0.36);
+    }
+    .device {
+      border-radius: 22px;
+      overflow: hidden;
+      background: #fffdf9;
+      border: 1px solid rgba(21,18,15,0.12);
+      min-height: 700px;
+      position: relative;
+    }
+    .top {
+      height: 54px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(250, 240, 231, 0.9);
+      border-bottom: 1px solid rgba(21,18,15,0.08);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      animation: fadeIn 420ms ease both;
+    }
+    .content {
+      padding: 18px 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .card {
+      background: rgba(255,255,255,0.92);
+      border: 1px solid rgba(21,18,15,0.1);
+      border-radius: 14px;
+      padding: 12px;
+      box-shadow: 0 12px 22px rgba(65,43,24,0.08);
+      animation: liftIn 520ms cubic-bezier(.2,.9,.2,1) both;
+    }
+    .card:nth-child(2) { animation-delay: 80ms; }
+    .card:nth-child(3) { animation-delay: 140ms; }
+    .label {
+      font-size: 11px;
+      color: #8a7e72;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 7px;
+      font-weight: 700;
+    }
+    ul { margin: 0; padding-left: 18px; }
+    li { margin: 0 0 6px; font-size: 13px; line-height: 1.45; color: #433d37; }
+    .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+    .chip {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 5px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(218,79,47,0.26);
+      background: rgba(218,79,47,0.08);
+      color: #bf3f23;
+    }
+    .cta {
+      margin-top: 8px;
+      border: 1px solid rgba(218,79,47,0.25);
+      background: linear-gradient(135deg, rgba(218,79,47,0.14), rgba(240,122,96,0.1));
+      border-radius: 10px;
+      padding: 9px 10px;
+      font-size: 12px;
+      color: #7a2f1d;
+      font-weight: 700;
+      text-align: center;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px);} to { opacity: 1; transform: translateY(0);} }
+    @keyframes liftIn { from { opacity: 0; transform: translateY(18px) scale(0.98);} to { opacity: 1; transform: translateY(0) scale(1);} }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <div class="device">
+      <div class="top">📱 Expo Mobile Preview</div>
+      <div class="content">
+        <section class="card">
+          <div class="label">Design Brief</div>
+          <div style="font-size:13px; line-height:1.5; color:#433d37;">${escapeHtml(plan.designBrief || 'High-fidelity mobile SaaS app focused on UX clarity, motion, and responsive interactions.')}</div>
+        </section>
+        <section class="card">
+          <div class="label">Wireframe Plan</div>
+          <ul>${wireframeItems}</ul>
+        </section>
+        <section class="card">
+          <div class="label">Motion Plan</div>
+          <ul>${motionItems}</ul>
+          <div class="chips">${libItems}</div>
+          <div class="cta">Preview artifact mirrors generated Expo direction</div>
+        </section>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  return {
+    kind: 'html',
+    content: html,
+    title: 'Expo Mobile Preview',
+    description: 'Device mock preview for Expo React Native output',
+  };
+}
+
+function escapeHtml(input: string): string {
+  return input
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
 function normalizeBlockDeclaration(code: string, expectedName: string): string {
@@ -417,6 +764,26 @@ function getLayoutGuidance(layout: string): string {
     'app-shell': 'Full-height: Navbar + Sidebar + main scrollable area. Like a real SaaS app.',
   };
   return guides[layout] || guides['single-column'];
+}
+
+function extractImportSources(code: string): string[] {
+  const regex = /^\s*import[\s\S]*?from\s+['"]([^'"]+)['"];?/gm;
+  const sources = new Set<string>();
+  let match: RegExpExecArray | null = null;
+
+  while ((match = regex.exec(code)) !== null) {
+    const source = match[1];
+    if (source) {
+      sources.add(source);
+    }
+  }
+
+  if (sources.size === 0 && /react-native|expo/i.test(code)) {
+    sources.add('react-native');
+    sources.add('expo');
+  }
+
+  return Array.from(sources);
 }
 
 // ---- HELPER: Extract component names from code ----

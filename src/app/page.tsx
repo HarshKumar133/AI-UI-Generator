@@ -7,7 +7,7 @@ import { CodePanel } from '@/components/layout/CodePanel';
 import { VersionHistory } from '@/components/layout/VersionHistory';
 import { PreviewPanel } from '@/components/preview/PreviewPanel';
 import { LandingPage } from '@/components/home/LandingPage';
-import { ChatMessage, GenerationResult, ComponentNode, ComponentType, VersionEntry, AgentEventState } from '@/types';
+import { ChatMessage, GenerationResult, ComponentNode, VersionEntry, AgentEventState, GenerationMode, GenerationTarget } from '@/types';
 import { Template } from '@/lib/templates';
 import {
   Sparkles,
@@ -21,19 +21,25 @@ import {
 
 type ViewTab = 'split' | 'code' | 'preview';
 
-// Keywords that suggest an interactive app (should use full HTML mode)
-const INTERACTIVE_APP_KEYWORDS = [
-  'calculator', 'game', 'todo', 'to-do', 'timer', 'stopwatch', 'countdown',
-  'quiz', 'pomodoro', 'markdown editor', 'text editor', 'notepad', 'paint',
-  'drawing', 'canvas', 'snake', 'tetris', 'memory game', 'flashcard',
-  'currency converter', 'unit converter', 'password generator', 'color picker',
-  'random', 'generator', 'app that', 'app which', 'working', 'functional',
-  'interactive', 'click', 'button that', 'form that', 'tool',
+const STANDALONE_HTML_KEYWORDS = [
+  'single html',
+  'standalone html',
+  'one html file',
+  'plain html app',
+  'download html',
 ];
 
-function detectFullAppMode(prompt: string): boolean {
+function detectStandaloneHtmlMode(prompt: string): boolean {
   const lower = prompt.toLowerCase();
-  return INTERACTIVE_APP_KEYWORDS.some(kw => lower.includes(kw));
+  return STANDALONE_HTML_KEYWORDS.some((kw) => lower.includes(kw));
+}
+
+function toKebabCase(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 50) || 'generated-app';
 }
 
 export default function Home() {
@@ -43,9 +49,12 @@ export default function Home() {
   const [currentHtml, setCurrentHtml] = useState(''); // for full-app HTML mode
   const [outputMode, setOutputMode] = useState<'tsx' | 'html' | 'nextjs'>('tsx');
   const [previewKey, setPreviewKey] = useState(0); // increments to force iframe reload
-  const [componentList, setComponentList] = useState<ComponentType[]>([]);
+  const [componentList, setComponentList] = useState<string[]>([]);
   const [previewComponents, setPreviewComponents] = useState<ComponentNode[]>([]);
   const [previewLayout, setPreviewLayout] = useState('single-column');
+  const [currentMode, setCurrentMode] = useState<GenerationMode>('creative');
+  const [currentTarget, setCurrentTarget] = useState<GenerationTarget>('web');
+  const [downloadPayload, setDownloadPayload] = useState<{ filename: string; content: string; mimeType?: string; label?: string } | undefined>(undefined);
   const [currentVersion, setCurrentVersion] = useState<number | null>(null);
   const [versions, setVersions] = useState<VersionEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -73,30 +82,49 @@ export default function Home() {
     }
   }, []);
 
-  // Apply TSX generation result (existing pipeline)
+  // Apply generation result (web or expo-rn)
   const applyGenerationResult = useCallback((result: GenerationResult) => {
-    setCurrentCode(result.generation.code);
-    setCurrentHtml('');
-    setOutputMode('nextjs'); // use Next.js native compilation
-    setComponentList(result.generation.componentList);
+    const primaryCode = result.generation.primaryCode || result.generation.code;
+    const metadata = result.metadata || result.generation.metadata;
+    const mode = metadata?.mode || 'creative';
+    const target = metadata?.target || result.plan.target || 'web';
+    const previewArtifact = result.generation.previewArtifact;
+
+    setCurrentMode(mode);
+    setCurrentTarget(target);
+    setCurrentCode(primaryCode);
+    setComponentList(result.generation.componentList || []);
     setPreviewComponents(result.plan.blocks ? result.plan.blocks.flatMap(b => b.components) : []);
     setPreviewLayout(result.plan.layout);
     setCurrentVersion(result.version);
     setPreviewError(undefined);
     setCurrentTitle(result.userPrompt);
+    setDownloadPayload(undefined);
+
+    if (target === 'expo-rn' && previewArtifact?.kind === 'html') {
+      setCurrentHtml(previewArtifact.content);
+      setOutputMode('html');
+      setDownloadPayload({
+        filename: `${toKebabCase(result.userPrompt)}-expo-bundle.txt`,
+        content: primaryCode,
+        mimeType: 'text/plain',
+        label: '↓ Download Code',
+      });
+    } else {
+      setCurrentHtml('');
+      setOutputMode('nextjs'); // use Next.js native compilation
+      writePreviewFile(primaryCode);
+    }
 
     if (result.version > versionCounterRef.current) {
       versionCounterRef.current = result.version;
     }
 
-    // Write to disk for Next.js live preview (fire-and-forget)
-    writePreviewFile(result.generation.code);
-
     setVersions(prev => {
       if (prev.some(v => v.version === result.version)) return prev;
       return [...prev, {
         version: result.version,
-        code: result.generation.code,
+        code: primaryCode,
         prompt: result.userPrompt,
         plan: result.plan,
         explanation: result.explanation,
@@ -106,12 +134,15 @@ export default function Home() {
   }, [writePreviewFile]);
 
   // Apply full HTML app result
-  const applyHtmlResult = useCallback((html: string, title: string) => {
+  const applyHtmlResult = useCallback((html: string, title: string, metadata?: { mode?: GenerationMode; target?: GenerationTarget }) => {
     versionCounterRef.current += 1;
     setCurrentHtml(html);
     setCurrentCode('');
     setOutputMode('html');
     setPreviewComponents([]);
+    setCurrentMode(metadata?.mode || 'creative');
+    setCurrentTarget(metadata?.target || 'web');
+    setDownloadPayload(undefined);
     setCurrentVersion(versionCounterRef.current);
     setPreviewError(undefined);
     setCurrentTitle(title);
@@ -138,19 +169,18 @@ export default function Home() {
     setPreviewError(undefined);
 
     try {
-      // Detect whether to use full-app mode or component mode
-      const useFullApp = detectFullAppMode(message) && !currentCode;
+      const useStandaloneHtml = detectStandaloneHtmlMode(message) && !currentCode && !currentHtml;
 
-      if (useFullApp) {
+      if (useStandaloneHtml) {
         // ── FULL HTML APP MODE ──
         const response = await fetch('/api/generate-app', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: message }),
+          body: JSON.stringify({ prompt: message, generationMode: 'creative', targetPreference: 'web' }),
         });
         const data = await response.json();
         if (data.success && data.data?.html) {
-          applyHtmlResult(data.data.html, data.data.title || message);
+          applyHtmlResult(data.data.html, data.data.title || message, data.data.metadata);
           const assistantMsg: ChatMessage = {
             id: `assistant-${Date.now()}`, role: 'assistant',
             content: `✅ Built your **${data.data.title || message}** — a fully working app! You can interact with it in the Preview panel. Click **↓ Download** to save the HTML file.`,
@@ -161,12 +191,22 @@ export default function Home() {
         } else {
           throw new Error(data.error || 'Full-app generation failed');
         }
-      } else if (currentCode || currentHtml) {
+      } else if (currentCode) {
         // ── MODIFY MODE (existing pipeline) ──
         const response = await fetch('/api/modify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: message, currentCode: currentCode || '// empty', currentVersion: currentVersion || 0, previousLayout: previewLayout, previousComponentList: componentList }),
+          body: JSON.stringify({
+            prompt: message,
+            currentCode: currentCode || '// empty',
+            currentVersion: currentVersion || 0,
+            previousLayout: previewLayout,
+            previousComponentList: componentList,
+            generationMode: currentMode,
+            targetPreference: currentTarget,
+            previousTarget: currentTarget,
+            previousMode: currentMode,
+          }),
         });
         const data = await response.json();
         if (data.success && data.data) {
@@ -174,13 +214,38 @@ export default function Home() {
           const assistantMsg: ChatMessage = { id: `assistant-${Date.now()}`, role: 'assistant', content: (data.data as GenerationResult).explanation.explanation, timestamp: new Date().toISOString(), generationResult: data.data };
           setMessages(prev => [...prev, assistantMsg]);
         } else throw new Error(data.error || 'Modification failed');
+      } else if (currentHtml) {
+        // HTML-only flow continues via /generate-app
+        const response = await fetch('/api/generate-app', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: message, generationMode: currentMode, targetPreference: currentTarget }),
+        });
+        const data = await response.json();
+        if (data.success && data.data?.html) {
+          applyHtmlResult(data.data.html, data.data.title || message, data.data.metadata);
+          const assistantMsg: ChatMessage = {
+            id: `assistant-${Date.now()}`,
+            role: 'assistant',
+            content: 'Updated standalone HTML app generated.',
+            timestamp: new Date().toISOString(),
+          };
+          setMessages((prev) => [...prev, assistantMsg]);
+          setActiveTab('preview');
+        } else {
+          throw new Error(data.error || 'HTML regeneration failed');
+        }
       } else {
         // ── COMPONENT/LAYOUT GENERATION MODE ──
         setActiveAgents([]);
         const response = await fetch('/api/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: message }),
+          body: JSON.stringify({
+            prompt: message,
+            generationMode: 'creative',
+            targetPreference: 'auto',
+          }),
         });
 
         if (!response.body) throw new Error('No response body from server');
@@ -247,21 +312,35 @@ export default function Home() {
     } finally {
       setIsLoading(false);
     }
-  }, [currentCode, currentHtml, currentVersion, applyGenerationResult, applyHtmlResult, previewLayout, componentList]);
+  }, [
+    currentCode,
+    currentHtml,
+    currentVersion,
+    applyGenerationResult,
+    applyHtmlResult,
+    previewLayout,
+    componentList,
+    currentMode,
+    currentTarget,
+  ]);
 
   const handleRollback = useCallback(async (targetVersion: number) => {
     const version = versions.find(v => v.version === targetVersion);
     if (!version) return;
     setCurrentCode(version.code);
     setCurrentHtml('');
-    setOutputMode('tsx');
+    setOutputMode('nextjs');
     setPreviewComponents(version.plan.blocks ? version.plan.blocks.flatMap(b => b.components) : []);
     setPreviewLayout(version.plan.layout);
+    setCurrentMode('creative');
+    setCurrentTarget('web');
+    setDownloadPayload(undefined);
     setCurrentVersion(version.version);
     setPreviewError(undefined);
     setShowVersionHistory(false);
+    writePreviewFile(version.code);
     setMessages(prev => [...prev, { id: `system-${Date.now()}`, role: 'assistant', content: `Rolled back to version ${targetVersion}. Original prompt: "${version.prompt}"`, timestamp: new Date().toISOString() }]);
-  }, [versions]);
+  }, [versions, writePreviewFile]);
 
   const handleRegenerate = useCallback(async () => {
     const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
@@ -269,6 +348,7 @@ export default function Home() {
     setCurrentCode('');
     setCurrentHtml('');
     setCurrentVersion(null);
+    setDownloadPayload(undefined);
     handleSendMessage(lastUserMsg.content);
   }, [messages, handleSendMessage]);
 
@@ -280,6 +360,9 @@ export default function Home() {
     setComponentList([]);
     setPreviewComponents([]);
     setPreviewLayout('single-column');
+    setCurrentMode('creative');
+    setCurrentTarget('web');
+    setDownloadPayload(undefined);
     setCurrentVersion(null);
     setVersions([]);
     setPreviewError(undefined);
@@ -315,7 +398,13 @@ export default function Home() {
           {currentVersion !== null && (
             <span className={styles.versionTag}>v{currentVersion}</span>
           )}
-          {outputMode === 'html' && (
+          <span className={styles.versionTag} style={{ background: 'rgba(21,18,15,0.08)', color: '#433d37', border: '1px solid rgba(21,18,15,0.14)' }}>
+            {currentMode === 'creative' ? 'Creative' : 'Deterministic'}
+          </span>
+          {currentTarget === 'expo-rn' && (
+            <span className={styles.versionTag} style={{ background: 'rgba(218,79,47,0.12)', color: '#da4f2f', border: '1px solid rgba(218,79,47,0.2)' }}>📱 Expo Target</span>
+          )}
+          {outputMode === 'html' && currentTarget === 'web' && (
             <span className={styles.versionTag} style={{ background: 'rgba(218,79,47,0.12)', color: '#da4f2f', border: '1px solid rgba(218,79,47,0.2)' }}>⚡ Full App</span>
           )}
           {versions.length > 0 && (
@@ -389,6 +478,7 @@ export default function Home() {
                     htmlOutput={currentHtml || undefined}
                     outputMode={outputMode}
                     title={currentTitle}
+                    downloadPayload={downloadPayload}
                   />
                 </div>
               </div>
@@ -407,6 +497,7 @@ export default function Home() {
                 htmlOutput={currentHtml || undefined}
                 outputMode={outputMode}
                 title={currentTitle}
+                downloadPayload={downloadPayload}
               />
             )}
           </div>

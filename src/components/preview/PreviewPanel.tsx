@@ -17,10 +17,16 @@ interface PreviewPanelProps {
     htmlOutput?: string;
     title?: string;
     outputMode?: 'tsx' | 'html' | 'nextjs';
+    downloadPayload?: {
+        filename: string;
+        content: string;
+        mimeType?: string;
+        label?: string;
+    };
 }
 
 export const PreviewPanel: React.FC<PreviewPanelProps> = ({
-    components, layout, version, error, code, htmlOutput, title, outputMode: externalMode,
+    components, layout, version, error, code, htmlOutput, title, outputMode: externalMode, downloadPayload,
 }) => {
     const hasContent = (components && components.length > 0) || !!code || !!htmlOutput;
     const liveCode = htmlOutput || code;
@@ -137,7 +143,7 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({
             <div className={styles.previewContainer}>
                 <div className={styles.previewContent}>
                     {liveCode ? (
-                        <LivePreview code={liveCode} outputMode={outputMode} title={title} />
+                        <LivePreview code={liveCode} outputMode={outputMode} title={title} downloadPayload={downloadPayload} />
                     ) : (
                         <ErrorBoundary>
                             <ComponentRenderer nodes={components} layout={layout} />

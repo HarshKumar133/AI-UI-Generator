@@ -122,22 +122,6 @@ export function ProductFeaturesSection() {
                     >
                       <IconComponent className="w-16 h-16 text-brand-red" />
                     </motion.div>
-                    
-                    {/* Feature visualization boxes */}
-                    <div className="grid grid-cols-3 gap-4">
-                      {[1, 2, 3, 4, 5, 6].map((i) => (
-                        <motion.div
-                          key={i}
-                          initial={{ opacity: 0.3 }}
-                          whileInView={{ opacity: 0.6 }}
-                          transition={{ delay: i * 0.1 }}
-                          className={cn(
-                            "rounded-lg h-20 backdrop-blur-sm border border-white/30",
-                            i % 2 === 0 ? "bg-white/40" : "bg-brand-red/20"
-                          )}
-                        />
-                      ))}
-                    </div>
                   </div>
 
                   {/* Metric Badge Overlay */}

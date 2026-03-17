@@ -3,7 +3,7 @@
 // Interprets user intent → Chooses layout → Selects components → Outputs structured plan
 // ============================================
 
-import { PlannerOutput, PlannerBlock } from '@/types';
+import { PlannerOutput, GenerationMode, GenerationTarget } from '@/types';
 import { callGemini } from './geminiClient';
 import { getComponentDescriptions } from '../validation';
 
@@ -201,9 +201,87 @@ User: "analytics dashboard for e-commerce"
   "reasoning": "Dashboard layout with grouped blocks for navigation, stats grid, and charts."
 }`;
 
-// ---- PLANNER FUNCTION ----
+const CREATIVE_PLANNER_SYSTEM_PROMPT = `You are the CREATIVE PRODUCT PLANNER for a SaaS UI generation system.
 
-export async function runPlanner(userPrompt: string): Promise<PlannerOutput> {
+Your mission: translate the user request into a creative, implementation-ready product plan.
+The system supports:
+- target: "web" (default)
+- target: "expo-rn" for Android/iOS/mobile/native app requests
+
+Core quality bar:
+- Premium UI/UX direction (information hierarchy, visual language, motion, usability)
+- Practical implementation guidance that developers can execute directly
+- Clear library strategy (use best-fit UI/UX libraries for the target)
+
+Do NOT constrain yourself to a fixed list of components or layouts.
+Do NOT output markdown. Output STRICT JSON only.
+
+JSON OUTPUT SHAPE:
+{
+  "target": "web | expo-rn",
+  "layout": "single-column | two-column | sidebar-layout | dashboard | centered | full-width | landing-page | form-page | app-shell",
+  "reasoning": "1 sentence",
+  "designBrief": "2-4 sentences describing UX direction, audience, and visual tone",
+  "wireframePlan": [
+    "screen/section 1 with content hierarchy",
+    "screen/section 2 with key interactions"
+  ],
+  "motionPlan": [
+    "entry transition choice",
+    "interaction/micro-animation pattern",
+    "state transition behavior"
+  ],
+  "libraryPlan": [
+    { "name": "library-name", "reason": "why selected", "category": "ui|motion|charts|state|forms|platform" }
+  ],
+  "implementationPlan": [
+    "implementation step 1",
+    "implementation step 2"
+  ],
+  "blocks": [
+    {
+      "id": "kebab-case-block-id",
+      "description": "what this area does"
+    }
+  ]
+}
+
+Rules:
+- If user explicitly mentions Android/iOS/mobile/native app, use target "expo-rn".
+- Otherwise use target "web".
+- Keep plans realistic and specific for SaaS-grade product UX.
+- Include motion and interaction intent in every plan.
+- Keep "blocks" concise and high signal.
+`;
+
+// ---- PLANNER FUNCTION ----
+const VALID_LAYOUTS: PlannerOutput['layout'][] = [
+  'single-column',
+  'two-column',
+  'sidebar-layout',
+  'dashboard',
+  'centered',
+  'full-width',
+  'landing-page',
+  'form-page',
+  'app-shell',
+];
+
+export interface PlannerRunOptions {
+  mode?: GenerationMode;
+  target?: GenerationTarget;
+}
+
+export async function runPlanner(userPrompt: string, options: PlannerRunOptions = {}): Promise<PlannerOutput> {
+  const mode = options.mode ?? 'creative';
+  const target = options.target ?? 'web';
+
+  return mode === 'deterministic'
+    ? runDeterministicPlanner(userPrompt, target)
+    : runCreativePlanner(userPrompt, target);
+}
+
+async function runDeterministicPlanner(userPrompt: string, target: GenerationTarget): Promise<PlannerOutput> {
   const userMessage = `User wants: "${userPrompt}"
 
 Create the best component plan to build exactly what they asked for.
@@ -213,50 +291,158 @@ Create the best component plan to build exactly what they asked for.
 - Output ONLY the JSON plan, no other text.`;
 
   const response = await callGemini(userMessage, PLANNER_SYSTEM_PROMPT);
-
-  let cleanResponse = response.trim();
-  if (cleanResponse.startsWith('`')) {
-    cleanResponse = cleanResponse.replace(/^`{3}(?:json)?\s*\n?/, '').replace(/\n?`{3}\s*$/, '');
-  }
+  const cleanResponse = stripCodeFences(response);
 
   try {
-    const plan: PlannerOutput = JSON.parse(cleanResponse);
-
-    if (!plan.layout || !plan.blocks || !Array.isArray(plan.blocks)) {
-      throw new Error('Invalid plan structure: missing layout or blocks array');
-    }
-
-    const validLayouts = ['single-column', 'two-column', 'sidebar-layout', 'dashboard', 'centered', 'full-width', 'landing-page', 'form-page', 'app-shell'];
-    if (!validLayouts.includes(plan.layout)) {
-      plan.layout = 'single-column';
-    }
-
-    if (!plan.reasoning) {
-      plan.reasoning = 'Plan generated based on user intent.';
-    }
-
-    return plan;
+    const parsed = JSON.parse(cleanResponse) as PlannerOutput;
+    return normalizePlannerOutput(parsed, target, 'deterministic');
   } catch (error) {
-    console.error('[Planner] JSON parse error:', error);
-    console.error('[Planner] Raw response:', cleanResponse);
-
-    // Fallback plan
-    return {
-      layout: 'single-column',
-      blocks: [
-        {
-          id: 'error-block',
-          description: 'Error fallback block',
-          components: [
-            {
-              type: 'Card',
-              props: { title: '⚠️ Generation Failed', subtitle: 'Could not parse the plan — try a different prompt' },
-              children: [{ type: 'Button', props: { variant: 'primary' }, children: ['Try Again'] }],
-            },
-          ]
-        }
-      ],
-      reasoning: 'Fallback: JSON parse error from planner response.',
-    };
+    console.error('[Planner][Deterministic] JSON parse error:', error);
+    console.error('[Planner][Deterministic] Raw response:', cleanResponse);
+    return fallbackPlan(target, 'deterministic');
   }
+}
+
+async function runCreativePlanner(userPrompt: string, target: GenerationTarget): Promise<PlannerOutput> {
+  const userMessage = `User request: "${userPrompt}"
+
+Primary target: "${target}".
+
+Build a creative, implementation-ready plan for a SaaS-grade experience:
+- include UX strategy and hierarchy decisions
+- include wireframe sections/screens
+- include motion/animation intent
+- include best-fit libraries for the chosen target
+- include practical implementation steps
+
+Return STRICT JSON only.`;
+
+  const response = await callGemini(userMessage, CREATIVE_PLANNER_SYSTEM_PROMPT);
+  const cleanResponse = stripCodeFences(response);
+
+  try {
+    const parsed = JSON.parse(cleanResponse) as PlannerOutput;
+    return normalizePlannerOutput(parsed, target, 'creative');
+  } catch (error) {
+    console.error('[Planner][Creative] JSON parse error:', error);
+    console.error('[Planner][Creative] Raw response:', cleanResponse);
+    return fallbackPlan(target, 'creative');
+  }
+}
+
+function stripCodeFences(response: string): string {
+  const trimmed = response.trim();
+  if (!trimmed.startsWith('`')) {
+    return trimmed;
+  }
+  return trimmed.replace(/^`{3}(?:json)?\s*\n?/, '').replace(/\n?`{3}\s*$/, '');
+}
+
+function normalizePlannerOutput(
+  plan: PlannerOutput,
+  target: GenerationTarget,
+  mode: GenerationMode
+): PlannerOutput {
+  const normalized: PlannerOutput = {
+    ...plan,
+    target: target,
+    layout: VALID_LAYOUTS.includes(plan.layout) ? plan.layout : target === 'expo-rn' ? 'app-shell' : 'single-column',
+    blocks: normalizeBlocks(plan.blocks),
+    reasoning: plan.reasoning || (mode === 'creative'
+      ? `Creative ${target} plan generated from user intent.`
+      : 'Plan generated based on user intent.'),
+  };
+
+  if (mode === 'creative') {
+    normalized.designBrief = plan.designBrief || `Build a polished ${target === 'expo-rn' ? 'mobile app' : 'web app'} experience with strong UX hierarchy and visual consistency.`;
+    normalized.wireframePlan = ensureStringArray(plan.wireframePlan, [
+      'Information architecture and primary screen sections',
+      'Primary user journey and core CTA flow',
+    ]);
+    normalized.motionPlan = ensureStringArray(plan.motionPlan, [
+      'Subtle page/screen entry fade + lift transition',
+      'Button, card, and tab micro-interactions with spring timing',
+      'Loading, empty, and success states use smooth opacity and position transitions',
+    ]);
+    normalized.libraryPlan = Array.isArray(plan.libraryPlan) && plan.libraryPlan.length > 0
+      ? plan.libraryPlan
+      : (target === 'expo-rn'
+        ? [
+            { name: 'expo-router', reason: 'Structured navigation for multi-screen Expo apps', category: 'platform' },
+            { name: 'react-native-reanimated', reason: 'High-performance motion and transitions', category: 'motion' },
+            { name: 'react-native-paper', reason: 'Mature UI primitives for mobile SaaS interfaces', category: 'ui' },
+          ]
+        : [
+            { name: 'framer-motion', reason: 'Production-grade web motion and interaction choreography', category: 'motion' },
+            { name: 'shadcn/ui', reason: 'Composable accessible UI primitives for SaaS interfaces', category: 'ui' },
+            { name: 'recharts', reason: 'Reliable charting primitives for dashboards and analytics', category: 'charts' },
+          ]);
+    normalized.implementationPlan = ensureStringArray(plan.implementationPlan, [
+      'Build the app shell and primary navigation first',
+      'Implement core views and data states with reusable UI patterns',
+      'Polish interactions, motion, and responsive behavior for production readiness',
+    ]);
+  }
+
+  return normalized;
+}
+
+function normalizeBlocks(blocks: PlannerOutput['blocks']): PlannerOutput['blocks'] {
+  if (!Array.isArray(blocks)) {
+    return [];
+  }
+
+  return blocks
+    .filter((block) => block && typeof block.id === 'string')
+    .map((block, index) => ({
+      id: block.id || `block-${index + 1}`,
+      description: block.description || `UI block ${index + 1}`,
+      components: Array.isArray(block.components) ? block.components : [],
+    }));
+}
+
+function ensureStringArray(value: unknown, fallback: string[]): string[] {
+  if (!Array.isArray(value)) {
+    return fallback;
+  }
+  const valid = value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0);
+  return valid.length > 0 ? valid : fallback;
+}
+
+function fallbackPlan(target: GenerationTarget, mode: GenerationMode): PlannerOutput {
+  return {
+    layout: target === 'expo-rn' ? 'app-shell' : 'single-column',
+    target,
+    blocks: [
+      {
+        id: 'fallback-shell',
+        description: 'Core app shell and primary content area',
+        components: mode === 'deterministic'
+          ? [
+              {
+                type: 'Card',
+                props: { title: '⚠️ Planning fallback', subtitle: 'Planner response was invalid; using safe defaults.' },
+                children: [],
+              },
+            ]
+          : [],
+      },
+    ],
+    reasoning: `Fallback ${mode} planner response applied.`,
+    designBrief: mode === 'creative'
+      ? `Create a high-quality ${target === 'expo-rn' ? 'mobile' : 'web'} experience with clear hierarchy and polished motion.`
+      : undefined,
+    wireframePlan: mode === 'creative'
+      ? ['App shell with clear nav', 'Primary content surface with key actions']
+      : undefined,
+    motionPlan: mode === 'creative'
+      ? ['Subtle entry animation', 'Interactive hover/press transitions']
+      : undefined,
+    libraryPlan: mode === 'creative'
+      ? [{ name: target === 'expo-rn' ? 'react-native-reanimated' : 'framer-motion', reason: 'Reliable interaction animations', category: 'motion' }]
+      : undefined,
+    implementationPlan: mode === 'creative'
+      ? ['Create shell', 'Build primary feature flow', 'Polish transitions and responsive behavior']
+      : undefined,
+  };
 }

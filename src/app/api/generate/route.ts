@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { orchestrateGeneration } from '@/lib/agents';
-import { GenerateRequest, ApiResponse, GenerationResult } from '@/types';
+import { GenerateRequest, GenerationEvent } from '@/types';
 import { getVersionHistory, addVersion } from '@/lib/store';
 
 export const dynamic = 'force-dynamic';
@@ -22,17 +22,25 @@ export async function POST(request: NextRequest) {
             async start(controller) {
                 const encoder = new TextEncoder();
 
-                const sendEvent = (event: any) => {
+                const sendEvent = (event: GenerationEvent) => {
                     controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
                 };
 
                 try {
-                    const result = await orchestrateGeneration(body.prompt, currentVersion, sendEvent);
+                    const result = await orchestrateGeneration(
+                        body.prompt,
+                        currentVersion,
+                        sendEvent,
+                        {
+                            generationMode: body.generationMode,
+                            targetPreference: body.targetPreference,
+                        }
+                    );
 
                     // Store version
                     addVersion({
                         version: result.version,
-                        code: result.generation.code,
+                        code: result.generation.primaryCode || result.generation.code,
                         prompt: result.userPrompt,
                         plan: result.plan,
                         explanation: result.explanation,
