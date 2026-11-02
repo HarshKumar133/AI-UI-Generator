@@ -2,6 +2,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 
 let clients: GoogleGenerativeAI[] = [];
 let activeKeyIndex = 0;
+const DEFAULT_MODEL = process.env.GEMINI_MODEL?.trim() || 'gemini-2.5-flash';
 
 export function getGeminiClient(): GoogleGenerativeAI {
     if (clients.length === 0) {
@@ -26,6 +27,19 @@ export function rotateGeminiClient(): void {
     }
 }
 
+function isRateLimitError(error: unknown): boolean {
+    if (typeof error !== 'object' || error === null) {
+        return false;
+    }
+
+    const maybeError = error as { status?: number; message?: string };
+    return (
+        maybeError.status === 429 ||
+        maybeError.message?.includes('429') === true ||
+        maybeError.message?.toLowerCase().includes('quota') === true
+    );
+}
+
 export async function callGemini(prompt: string, systemInstruction?: string): Promise<string> {
     getGeminiClient(); // Ensure clients are initialized
 
@@ -35,7 +49,7 @@ export async function callGemini(prompt: string, systemInstruction?: string): Pr
     while (attempts < maxAttempts) {
         const client = getGeminiClient();
         const model = client.getGenerativeModel({
-            model: 'gemini-2.5-flash',
+            model: DEFAULT_MODEL,
             ...(systemInstruction && {
                 systemInstruction: {
                     parts: [{ text: systemInstruction }],
@@ -47,10 +61,8 @@ export async function callGemini(prompt: string, systemInstruction?: string): Pr
         try {
             const result = await model.generateContent(prompt);
             return result.response.text();
-        } catch (error: any) {
-            const isRateLimit = error?.status === 429 || error?.message?.includes('429') || error?.message?.includes('quota');
-
-            if (isRateLimit) {
+        } catch (error: unknown) {
+            if (isRateLimitError(error)) {
                 console.warn(`[Gemini API] Key index ${activeKeyIndex} hit rate limit (429). Rotating key...`);
                 rotateGeminiClient();
                 attempts++;

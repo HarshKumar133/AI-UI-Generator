@@ -290,16 +290,12 @@ Create the best component plan to build exactly what they asked for.
 - Use realistic sample data
 - Output ONLY the JSON plan, no other text.`;
 
-  const response = await callGemini(userMessage, PLANNER_SYSTEM_PROMPT);
-  const cleanResponse = stripCodeFences(response);
-
   try {
-    const parsed = JSON.parse(cleanResponse) as PlannerOutput;
-    return normalizePlannerOutput(parsed, target, 'deterministic');
+    const response = await callGemini(userMessage, PLANNER_SYSTEM_PROMPT);
+    return parsePlannerResponse(response, target, 'deterministic');
   } catch (error) {
-    console.error('[Planner][Deterministic] JSON parse error:', error);
-    console.error('[Planner][Deterministic] Raw response:', cleanResponse);
-    return fallbackPlan(target, 'deterministic');
+    console.error('[Planner][Deterministic] Planner failed:', error);
+    return fallbackPlan(target, 'deterministic', userPrompt);
   }
 }
 
@@ -317,16 +313,12 @@ Build a creative, implementation-ready plan for a SaaS-grade experience:
 
 Return STRICT JSON only.`;
 
-  const response = await callGemini(userMessage, CREATIVE_PLANNER_SYSTEM_PROMPT);
-  const cleanResponse = stripCodeFences(response);
-
   try {
-    const parsed = JSON.parse(cleanResponse) as PlannerOutput;
-    return normalizePlannerOutput(parsed, target, 'creative');
+    const response = await callGemini(userMessage, CREATIVE_PLANNER_SYSTEM_PROMPT);
+    return parsePlannerResponse(response, target, 'creative');
   } catch (error) {
-    console.error('[Planner][Creative] JSON parse error:', error);
-    console.error('[Planner][Creative] Raw response:', cleanResponse);
-    return fallbackPlan(target, 'creative');
+    console.error('[Planner][Creative] Planner failed:', error);
+    return fallbackPlan(target, 'creative', userPrompt);
   }
 }
 
@@ -336,6 +328,41 @@ function stripCodeFences(response: string): string {
     return trimmed;
   }
   return trimmed.replace(/^`{3}(?:json)?\s*\n?/, '').replace(/\n?`{3}\s*$/, '');
+}
+
+function parsePlannerResponse(
+  response: string,
+  target: GenerationTarget,
+  mode: GenerationMode
+): PlannerOutput {
+  const cleanResponse = stripCodeFences(response);
+  const parseCandidates = [cleanResponse];
+  const extracted = extractFirstJsonObject(cleanResponse);
+  if (extracted && extracted !== cleanResponse) {
+    parseCandidates.push(extracted);
+  }
+
+  for (const candidate of parseCandidates) {
+    try {
+      const parsed = JSON.parse(candidate) as PlannerOutput;
+      return normalizePlannerOutput(parsed, target, mode);
+    } catch {
+      // Try next candidate.
+    }
+  }
+
+  console.error(`[Planner][${mode}] Unable to parse planner response as JSON.`);
+  console.error(`[Planner][${mode}] Raw response:`, cleanResponse);
+  throw new Error('Planner returned invalid JSON.');
+}
+
+function extractFirstJsonObject(input: string): string | null {
+  const start = input.indexOf('{');
+  const end = input.lastIndexOf('}');
+  if (start === -1 || end === -1 || end <= start) {
+    return null;
+  }
+  return input.slice(start, end + 1);
 }
 
 function normalizePlannerOutput(
@@ -409,7 +436,9 @@ function ensureStringArray(value: unknown, fallback: string[]): string[] {
   return valid.length > 0 ? valid : fallback;
 }
 
-function fallbackPlan(target: GenerationTarget, mode: GenerationMode): PlannerOutput {
+function fallbackPlan(target: GenerationTarget, mode: GenerationMode, userPrompt: string): PlannerOutput {
+  const promptSummary = userPrompt.trim().slice(0, 220) || 'user request';
+
   return {
     layout: target === 'expo-rn' ? 'app-shell' : 'single-column',
     target,
@@ -428,12 +457,15 @@ function fallbackPlan(target: GenerationTarget, mode: GenerationMode): PlannerOu
           : [],
       },
     ],
-    reasoning: `Fallback ${mode} planner response applied.`,
+    reasoning: `Fallback ${mode} planner response applied for: "${promptSummary}".`,
     designBrief: mode === 'creative'
-      ? `Create a high-quality ${target === 'expo-rn' ? 'mobile' : 'web'} experience with clear hierarchy and polished motion.`
+      ? `Create a high-quality ${target === 'expo-rn' ? 'mobile' : 'web'} experience focused on: ${promptSummary}.`
       : undefined,
     wireframePlan: mode === 'creative'
-      ? ['App shell with clear nav', 'Primary content surface with key actions']
+      ? [
+          `Primary flow based on request: ${promptSummary}`,
+          'App shell with clear navigation and action hierarchy',
+        ]
       : undefined,
     motionPlan: mode === 'creative'
       ? ['Subtle entry animation', 'Interactive hover/press transitions']

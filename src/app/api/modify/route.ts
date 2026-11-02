@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { orchestrateModification } from '@/lib/agents';
 import { ApiResponse, GenerationResult } from '@/types';
 import { addVersion } from '@/lib/store';
+import { normalizeConversationContext } from '@/lib/agents/conversationContext';
 
 export async function POST(request: NextRequest) {
     try {
@@ -24,6 +25,8 @@ export async function POST(request: NextRequest) {
         const result: GenerationResult = await orchestrateModification({
             prompt: body.prompt,
             currentCode: body.currentCode,
+            conversationContext: normalizeConversationContext(body.conversationContext),
+            currentTitle: typeof body.currentTitle === 'string' ? body.currentTitle.slice(0, 120) : undefined,
             currentVersion: body.currentVersion || 0,
             generationMode: body.generationMode,
             targetPreference: body.targetPreference,

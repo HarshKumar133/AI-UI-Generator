@@ -5,7 +5,7 @@
 // Context-aware: receives previous plan and explanation
 // ============================================
 
-import { ComponentType, GenerationMode, GenerationTarget, PreviewArtifact, GenerationMetadata } from '@/types';
+import { ComponentType, GenerationMode, GenerationTarget, PreviewArtifact, GenerationMetadata, ConversationTurn } from '@/types';
 import { callGemini } from './geminiClient';
 import { getComponentDescriptions } from '../validation';
 
@@ -28,6 +28,9 @@ CRITICAL RULES:
 - If user says "add", ADD to existing — don't replace
 - If user says "remove", REMOVE only that — keep everything else
 - If user says "change", MODIFY only the targeted part
+- Resolve references like "it", "that", "the previous one", and "same style" from the recent conversation and current code.
+- Treat the latest user message as a follow-up to the existing app unless they clearly ask for a new app or a full redesign.
+- Use prior user requests to preserve the intended product, audience, and design direction; do not make the user repeat that context.
 
 ${getComponentDescriptions()}
 
@@ -57,6 +60,9 @@ Your job is to modify existing code with precision while preserving untouched be
 
 Rules:
 - Keep changes tightly scoped to user intent.
+- Resolve pronouns and references such as "it", "that", "the previous one", and "same style" from the recent conversation and current source.
+- Treat the latest message as a follow-up to the existing app unless a new app or full redesign is explicitly requested.
+- Preserve the original product goal, audience, and established visual direction unless asked to change them.
 - You may use any suitable UI/UX libraries if needed.
 - Preserve the existing architecture where possible.
 - For web targets: keep output as valid TSX with GeneratedUI default export.
@@ -81,7 +87,7 @@ interface ModifierRunOptions {
 export async function runModifier(
     modificationPrompt: string,
     currentCode: string,
-    previousContext?: { layout?: string; componentList?: string[] },
+    previousContext?: { layout?: string; componentList?: string[]; conversationContext?: ConversationTurn[]; currentTitle?: string },
     options: ModifierRunOptions = {}
 ): Promise<{
     code: string;
@@ -93,11 +99,15 @@ export async function runModifier(
 }> {
     const mode = options.mode ?? 'creative';
     const target = options.target ?? 'web';
-    const contextInfo = previousContext
-        ? `\nPrevious context:
-- Layout: ${previousContext.layout || 'unknown'}
-- Components in use: ${previousContext.componentList?.join(', ') || 'unknown'}`
-        : '';
+    const recentConversation = previousContext?.conversationContext?.length
+        ? previousContext.conversationContext.map((turn) => `${turn.role === 'user' ? 'User' : 'Assistant'}: ${turn.content}`).join('\n')
+        : 'No earlier turns provided.';
+    const contextInfo = `\nCurrent app: ${previousContext?.currentTitle || 'untitled app'}
+Previous layout: ${previousContext?.layout || 'unknown'}
+Components in use: ${previousContext?.componentList?.join(', ') || 'unknown'}
+
+Recent conversation (oldest first):
+${recentConversation}`;
 
     const modeRules = mode === 'deterministic'
         ? `- Only use allowed components (Button, Card, Input, Table, Modal, Sidebar, Navbar, Chart)
@@ -124,67 +134,109 @@ ${modeRules}
 Return ONLY the JSON with "code", "changes", "added", "removed", and "modified" fields.`;
 
     const systemPrompt = mode === 'deterministic' ? MODIFIER_SYSTEM_PROMPT : CREATIVE_MODIFIER_SYSTEM_PROMPT;
-    const response = await callGemini(userMessage, systemPrompt);
+    let response = await callGemini(userMessage, systemPrompt);
+    let parsedResult = parseModifierResponse(response);
 
+    for (let attempt = 1; !parsedResult.ok && attempt <= MAX_MODIFIER_JSON_REPAIRS; attempt += 1) {
+        console.warn(`[Modifier] Invalid JSON output; retrying (${attempt}/${MAX_MODIFIER_JSON_REPAIRS}).`, parsedResult.diagnostics);
+        response = await callGemini(`Repair your previous response so the JSON parser accepts it.
+
+Exact parser/schema diagnostic:
+${parsedResult.diagnostics}
+
+Original follow-up request:
+${modificationPrompt}
+
+Previous response:
+\`\`\`json
+${response}
+\`\`\`
+
+Return the complete updated code in the "code" string. Escape all newlines and quotes as valid JSON. Return only the corrected JSON object.`, systemPrompt);
+        parsedResult = parseModifierResponse(response);
+    }
+
+    if (!parsedResult.ok) {
+        throw new Error(`The follow-up edit could not be applied because Gemini returned invalid modifier output after ${MAX_MODIFIER_JSON_REPAIRS} repair attempt(s). ${parsedResult.diagnostics}`);
+    }
+
+    const { code: modifiedCode, changes, changeDetails } = parsedResult.value;
+    let code = modifiedCode;
+
+    if (mode !== 'deterministic' && target === 'web') {
+        code = ensureGeneratedUI(code);
+    }
+
+    // Extract components/libraries used
+    const componentList = mode === 'deterministic' ? extractComponents(code) : extractImports(code);
+
+    // Ensure proper imports
+    if (mode === 'deterministic' && !code.includes("from '@/components/ui'") && !code.includes('from "@/components/ui"')) {
+        const importLine = `import { ${componentList.join(', ')} } from '@/components/ui';\n`;
+        code = `import React from 'react';\n${importLine}\n${code}`;
+    }
+
+    return {
+        code,
+        componentList,
+        previewArtifact: mode !== 'deterministic' && target === 'expo-rn' ? buildExpoPreviewArtifact(modificationPrompt, componentList) : undefined,
+        metadata: {
+            mode,
+            target,
+            runtime: target === 'expo-rn' ? 'expo-rn' : 'nextjs',
+            selectedLibraries: componentList,
+        },
+        changes,
+        changeDetails,
+    };
+}
+
+const MAX_MODIFIER_JSON_REPAIRS = 1;
+
+type ParsedModifierResponse =
+    | { ok: true; value: { code: string; changes: string; changeDetails: { added: string[]; removed: string[]; modified: string[] } } }
+    | { ok: false; diagnostics: string };
+
+function parseModifierResponse(response: string): ParsedModifierResponse {
     let cleanResponse = response.trim();
     if (cleanResponse.startsWith('`')) {
         cleanResponse = cleanResponse.replace(/^`{3}(?:json)?\s*\n?/, '').replace(/\n?`{3}\s*$/, '');
     }
 
+    let result: unknown;
     try {
-        const result = JSON.parse(cleanResponse);
-        let code = result.code || currentCode;
-        const changes = result.changes || 'Code modified based on your request.';
-        const changeDetails = {
-            added: result.added || [],
-            removed: result.removed || [],
-            modified: result.modified || [],
-        };
-
-        if (mode !== 'deterministic' && target === 'web') {
-            code = ensureGeneratedUI(code);
-        }
-
-        // Extract components/libraries used
-        const componentList = mode === 'deterministic' ? extractComponents(code) : extractImports(code);
-
-        // Ensure proper imports
-        if (mode === 'deterministic' && !code.includes("from '@/components/ui'") && !code.includes('from "@/components/ui"')) {
-            const importLine = `import { ${componentList.join(', ')} } from '@/components/ui';\n`;
-            code = `import React from 'react';\n${importLine}\n${code}`;
-        }
-
-        return {
-            code,
-            componentList,
-            previewArtifact: mode !== 'deterministic' && target === 'expo-rn' ? buildExpoPreviewArtifact(modificationPrompt, componentList) : undefined,
-            metadata: {
-                mode,
-                target,
-                runtime: target === 'expo-rn' ? 'expo-rn' : 'nextjs',
-                selectedLibraries: componentList,
-            },
-            changes,
-            changeDetails,
-        };
+        result = JSON.parse(cleanResponse);
     } catch (error) {
-        console.error('Modifier JSON parse error:', error);
-        return {
-            code: currentCode,
-            componentList: mode === 'deterministic' ? extractComponents(currentCode) : extractImports(currentCode),
-            previewArtifact: mode !== 'deterministic' && target === 'expo-rn'
-                ? buildExpoPreviewArtifact(modificationPrompt, extractImports(currentCode))
-                : undefined,
-            metadata: {
-                mode,
-                target,
-                runtime: target === 'expo-rn' ? 'expo-rn' : 'nextjs',
-                selectedLibraries: extractImports(currentCode),
-            },
-            changes: 'Modification failed — original code preserved.',
-            changeDetails: { added: [], removed: [], modified: [] },
-        };
+        return { ok: false, diagnostics: `JSON.parse failed: ${error instanceof Error ? error.message : 'invalid JSON'}` };
     }
+
+    if (!result || typeof result !== 'object' || Array.isArray(result)) {
+        return { ok: false, diagnostics: 'Modifier response schema error: expected a JSON object.' };
+    }
+
+    const payload = result as Record<string, unknown>;
+    if (typeof payload.code !== 'string' || !payload.code.trim()) {
+        return { ok: false, diagnostics: 'Modifier response schema error: "code" must be a non-empty string containing the complete updated application.' };
+    }
+
+    const detailKeys = ['added', 'removed', 'modified'] as const;
+    const invalidDetail = detailKeys.find((key) => payload[key] !== undefined && (!Array.isArray(payload[key]) || !(payload[key] as unknown[]).every((item) => typeof item === 'string')));
+    if (invalidDetail) {
+        return { ok: false, diagnostics: `Modifier response schema error: "${invalidDetail}" must be an array of strings.` };
+    }
+
+    return {
+        ok: true,
+        value: {
+            code: payload.code,
+            changes: typeof payload.changes === 'string' ? payload.changes : 'Updated the app based on your follow-up.',
+            changeDetails: {
+                added: (payload.added as string[] | undefined) ?? [],
+                removed: (payload.removed as string[] | undefined) ?? [],
+                modified: (payload.modified as string[] | undefined) ?? [],
+            },
+        },
+    };
 }
 
 function extractComponents(code: string): ComponentType[] {
@@ -214,8 +266,8 @@ function ensureGeneratedUI(code: string): string {
     if (!/export\s+default\s+function\s+GeneratedUI|export\s+default\s+GeneratedUI/.test(normalized)) {
         if (/function\s+GeneratedUI\s*\(/.test(normalized)) {
             normalized = normalized.replace(/function\s+GeneratedUI\s*\(/, 'export default function GeneratedUI(');
-        } else {
-            normalized += '\n\nexport default function GeneratedUI() { return null; }\n';
+        } else if (/\b(?:const|let|class)\s+GeneratedUI\b/.test(normalized)) {
+            normalized += '\n\nexport default GeneratedUI;\n';
         }
     }
     return normalized;

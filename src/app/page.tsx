@@ -7,7 +7,7 @@ import { CodePanel } from '@/components/layout/CodePanel';
 import { VersionHistory } from '@/components/layout/VersionHistory';
 import { PreviewPanel } from '@/components/preview/PreviewPanel';
 import { LandingPage } from '@/components/home/LandingPage';
-import { ChatMessage, GenerationResult, ComponentNode, VersionEntry, AgentEventState, GenerationMode, GenerationTarget } from '@/types';
+import { ChatMessage, GenerationResult, ComponentNode, VersionEntry, AgentEventState, GenerationMode, GenerationTarget, ConversationTurn } from '@/types';
 import { Template } from '@/lib/templates';
 import {
   Sparkles,
@@ -20,6 +20,22 @@ import {
 } from 'lucide-react';
 
 type ViewTab = 'split' | 'code' | 'preview';
+const WORKSPACE_STORAGE_KEY = 'simply-ui-workspace-v1';
+
+interface SavedWorkspaceState {
+  messages: ChatMessage[];
+  currentCode: string;
+  currentHtml: string;
+  outputMode: 'tsx' | 'html' | 'nextjs';
+  componentList: string[];
+  previewComponents: ComponentNode[];
+  previewLayout: string;
+  currentMode: GenerationMode;
+  currentTarget: GenerationTarget;
+  currentVersion: number | null;
+  currentTitle: string;
+  activeTab: ViewTab;
+}
 
 const STANDALONE_HTML_KEYWORDS = [
   'single html',
@@ -32,6 +48,15 @@ const STANDALONE_HTML_KEYWORDS = [
 function detectStandaloneHtmlMode(prompt: string): boolean {
   const lower = prompt.toLowerCase();
   return STANDALONE_HTML_KEYWORDS.some((kw) => lower.includes(kw));
+}
+
+function buildConversationContext(messages: ChatMessage[], latestPrompt: string): ConversationTurn[] {
+  const recentTurns = messages
+    .filter((entry) => !entry.content.startsWith('Error:'))
+    .slice(-9)
+    .map(({ role, content }) => ({ role, content }));
+
+  return [...recentTurns, { role: 'user' as const, content: latestPrompt }].slice(-10);
 }
 
 function toKebabCase(value: string): string {
@@ -64,21 +89,105 @@ export default function Home() {
   const [currentTitle, setCurrentTitle] = useState('');
   const [activeAgents, setActiveAgents] = useState<AgentEventState[]>([]);
   const [workspaceEntering, setWorkspaceEntering] = useState(false);
+  const [workspaceRestored, setWorkspaceRestored] = useState(false);
 
   const versionCounterRef = useRef(0);
   const hasEnteredWorkspaceRef = useRef(false);
 
+  // Generated source updates can trigger a full browser reload in Next.js dev mode.
+  // Keep the active workspace in this tab so a reload returns to the generated result.
+  useEffect(() => {
+    try {
+      const stored = sessionStorage.getItem(WORKSPACE_STORAGE_KEY);
+      if (stored) {
+        const saved = JSON.parse(stored) as Partial<SavedWorkspaceState>;
+        if (Array.isArray(saved.messages)) setMessages(saved.messages);
+        if (typeof saved.currentCode === 'string') setCurrentCode(saved.currentCode);
+        if (typeof saved.currentHtml === 'string') setCurrentHtml(saved.currentHtml);
+        if (saved.outputMode === 'tsx' || saved.outputMode === 'html' || saved.outputMode === 'nextjs') {
+          setOutputMode(saved.outputMode);
+        }
+        if (Array.isArray(saved.componentList)) setComponentList(saved.componentList);
+        if (Array.isArray(saved.previewComponents)) setPreviewComponents(saved.previewComponents);
+        if (typeof saved.previewLayout === 'string') setPreviewLayout(saved.previewLayout);
+        if (saved.currentMode === 'creative' || saved.currentMode === 'deterministic') setCurrentMode(saved.currentMode);
+        if (saved.currentTarget === 'web' || saved.currentTarget === 'expo-rn') setCurrentTarget(saved.currentTarget);
+        if (typeof saved.currentVersion === 'number' || saved.currentVersion === null) setCurrentVersion(saved.currentVersion);
+        if (typeof saved.currentTitle === 'string') setCurrentTitle(saved.currentTitle);
+        if (saved.activeTab === 'split' || saved.activeTab === 'code' || saved.activeTab === 'preview') {
+          setActiveTab(saved.activeTab);
+        }
+      }
+    } catch (error) {
+      console.warn('[workspace] Could not restore saved workspace:', error);
+      sessionStorage.removeItem(WORKSPACE_STORAGE_KEY);
+    } finally {
+      setWorkspaceRestored(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!workspaceRestored) return;
+
+    if (messages.length === 0 && !currentCode && !currentHtml) {
+      sessionStorage.removeItem(WORKSPACE_STORAGE_KEY);
+      return;
+    }
+
+    const saved: SavedWorkspaceState = {
+      messages: messages.map(({ id, role, content, timestamp }) => ({ id, role, content, timestamp })),
+      currentCode,
+      currentHtml,
+      outputMode,
+      componentList,
+      previewComponents,
+      previewLayout,
+      currentMode,
+      currentTarget,
+      currentVersion,
+      currentTitle,
+      activeTab,
+    };
+
+    try {
+      sessionStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(saved));
+    } catch (error) {
+      console.warn('[workspace] Could not save current workspace:', error);
+    }
+  }, [
+    workspaceRestored,
+    messages,
+    currentCode,
+    currentHtml,
+    outputMode,
+    componentList,
+    previewComponents,
+    previewLayout,
+    currentMode,
+    currentTarget,
+    currentVersion,
+    currentTitle,
+    activeTab,
+  ]);
+
   // Write TSX to disk so Next.js can compile it natively
   const writePreviewFile = useCallback(async (code: string) => {
     try {
-      await fetch('/api/write-preview', {
+      const response = await fetch('/api/write-preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code }),
       });
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        setPreviewError(result.diagnostics || result.error || 'Generated preview failed validation.');
+        return;
+      }
+      setPreviewError(undefined);
       setPreviewKey(k => k + 1); // triggers LivePreview reload
     } catch (e) {
       console.warn('[writePreviewFile] Failed:', e);
+      setPreviewError(e instanceof Error ? e.message : 'Could not validate generated preview.');
     }
   }, []);
 
@@ -167,6 +276,7 @@ export default function Home() {
     setMessages(prev => [...prev, userMsg]);
     setIsLoading(true);
     setPreviewError(undefined);
+    const conversationContext = buildConversationContext(messages, message);
 
     try {
       const useStandaloneHtml = detectStandaloneHtmlMode(message) && !currentCode && !currentHtml;
@@ -199,6 +309,8 @@ export default function Home() {
           body: JSON.stringify({
             prompt: message,
             currentCode: currentCode || '// empty',
+            conversationContext,
+            currentTitle,
             currentVersion: currentVersion || 0,
             previousLayout: previewLayout,
             previousComponentList: componentList,
@@ -211,6 +323,7 @@ export default function Home() {
         const data = await response.json();
         if (data.success && data.data) {
           applyGenerationResult(data.data as GenerationResult);
+          setCurrentTitle(currentTitle || (data.data as GenerationResult).userPrompt);
           const assistantMsg: ChatMessage = { id: `assistant-${Date.now()}`, role: 'assistant', content: (data.data as GenerationResult).explanation.explanation, timestamp: new Date().toISOString(), generationResult: data.data };
           setMessages(prev => [...prev, assistantMsg]);
         } else throw new Error(data.error || 'Modification failed');
@@ -219,7 +332,14 @@ export default function Home() {
         const response = await fetch('/api/generate-app', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: message, generationMode: currentMode, targetPreference: currentTarget }),
+          body: JSON.stringify({
+            prompt: message,
+            currentHtml,
+            conversationContext,
+            currentTitle,
+            generationMode: currentMode,
+            targetPreference: currentTarget,
+          }),
         });
         const data = await response.json();
         if (data.success && data.data?.html) {
@@ -322,6 +442,8 @@ export default function Home() {
     componentList,
     currentMode,
     currentTarget,
+    messages,
+    currentTitle,
   ]);
 
   const handleRollback = useCallback(async (targetVersion: number) => {
@@ -380,6 +502,10 @@ export default function Home() {
       return () => clearTimeout(timer);
     }
   }, [isWorkspaceEmpty]);
+
+  if (!workspaceRestored) {
+    return <div role="status" aria-label="Restoring workspace" style={{ minHeight: '100vh', background: '#fffdf9' }} />;
+  }
 
   if (isWorkspaceEmpty) {
     return <LandingPage onSendMessage={handleSendMessage} isLoading={isLoading} />;

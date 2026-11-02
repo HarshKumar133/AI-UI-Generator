@@ -16,10 +16,10 @@ import {
   ComponentType,
 } from '@/types';
 import { runPlanner } from './planner';
-import { runGenerator } from './generator';
+import { repairGeneratedCode, runGenerator } from './generator';
 import { runExplainer } from './explainer';
 import { runModifier } from './modifier';
-import { validateGeneratedCode, sanitizePrompt } from '../validation';
+import { validateGeneratedArtifact, validateGeneratedCode, sanitizePrompt } from '../validation';
 import { resolveGenerationMode, resolveTarget } from './strategy';
 
 interface OrchestrationOptions {
@@ -62,13 +62,17 @@ export async function orchestrateGeneration(
   }
 
   console.log('[Orchestrator] Step 2: Running Generator...');
-  const generation = await runGenerator(plan, onEvent, { mode, target });
+  const generated = await runGenerator(plan, onEvent, { mode, target, userPrompt: sanitizedPrompt });
+  const generatedCode = generated.primaryCode || generated.code;
+  const primaryCode = await validateOrRepairGeneratedCode(generatedCode, {
+    mode,
+    target,
+    userPrompt: sanitizedPrompt,
+    onEvent,
+  });
+  const generation = { ...generated, code: primaryCode, primaryCode };
 
-  const primaryCode = generation.primaryCode || generation.code;
   const validation = validateGeneratedCode(primaryCode, { mode, target });
-  if (!validation.isValid) {
-    console.warn('[Orchestrator] Validation errors:', validation.errors);
-  }
   if (validation.warnings.length > 0) {
     console.warn('[Orchestrator] Validation warnings:', validation.warnings);
   }
@@ -135,14 +139,18 @@ export async function orchestrateModification(
     {
       layout: request.previousLayout,
       componentList: request.previousComponentList,
+      conversationContext: request.conversationContext,
+      currentTitle: request.currentTitle,
     },
     { mode, target }
   );
 
-  const validation = validateGeneratedCode(code, { mode, target });
-  if (!validation.isValid) {
-    console.warn('[Orchestrator] Validation errors:', validation.errors);
-  }
+  const validatedCode = await validateOrRepairGeneratedCode(code, {
+    mode,
+    target,
+    userPrompt: sanitizedPrompt,
+  });
+  const validation = validateGeneratedCode(validatedCode, { mode, target });
   if (validation.warnings.length > 0) {
     console.warn('[Orchestrator] Validation warnings:', validation.warnings);
   }
@@ -166,8 +174,8 @@ export async function orchestrateModification(
   plan.reasoning = `Modification: ${changes}${changeSummary ? `. ${changeSummary}` : ''}`;
 
   const generation = {
-    code,
-    primaryCode: code,
+    code: validatedCode,
+    primaryCode: validatedCode,
     componentList,
     previewArtifact,
     metadata: modifierMetadata,
@@ -185,6 +193,59 @@ export async function orchestrateModification(
     timestamp: new Date().toISOString(),
     userPrompt: sanitizedPrompt,
   };
+}
+
+const MAX_GENERATED_CODE_REPAIRS = 2;
+
+async function validateOrRepairGeneratedCode(
+  initialCode: string,
+  options: {
+    mode: GenerationMode;
+    target: GenerationTarget;
+    userPrompt: string;
+    onEvent?: (event: GenerationEvent) => void;
+  }
+): Promise<string> {
+  const { mode, target, userPrompt, onEvent } = options;
+  const format = target === 'expo-rn' ? 'expo' : 'tsx';
+  let candidate = initialCode;
+
+  for (let attempt = 0; attempt <= MAX_GENERATED_CODE_REPAIRS; attempt += 1) {
+    const artifactValidation = validateGeneratedArtifact({ format, code: candidate }, format);
+    const codeValidation = validateGeneratedCode(candidate, { mode, target });
+    const diagnostics = [
+      artifactValidation.diagnostics,
+      ...codeValidation.errors.map((error) => `Generated-code safety validation: ${error}`),
+    ].filter(Boolean).join('\n');
+
+    if (artifactValidation.isValid && codeValidation.isValid) {
+      if (codeValidation.warnings.length > 0) {
+        console.warn('[Orchestrator] Validation warnings:', codeValidation.warnings);
+      }
+      return candidate;
+    }
+
+    if (attempt === MAX_GENERATED_CODE_REPAIRS) {
+      throw new Error(`Generated code did not pass validation after ${MAX_GENERATED_CODE_REPAIRS} automatic repair attempts.\n${diagnostics}`);
+    }
+
+    console.warn(`[Orchestrator] Generated code failed validation; running repair ${attempt + 1}/${MAX_GENERATED_CODE_REPAIRS}.`, diagnostics);
+    onEvent?.({
+      type: 'agent_start',
+      agentId: 'validation-repair',
+      agentName: 'Syntax Repair',
+      message: `Correcting validation errors (attempt ${attempt + 1}/${MAX_GENERATED_CODE_REPAIRS})...`,
+    });
+    candidate = await repairGeneratedCode(candidate, diagnostics, { mode, target, userPrompt });
+    onEvent?.({
+      type: 'agent_done',
+      agentId: 'validation-repair',
+      agentName: 'Syntax Repair',
+      message: 'Rechecking corrected implementation...',
+    });
+  }
+
+  throw new Error('Generated code validation failed.');
 }
 
 function buildFallbackPlan(

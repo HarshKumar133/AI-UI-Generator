@@ -156,10 +156,17 @@ export interface ModifyRequest {
   prompt: string;
   currentCode: string;
   currentVersion: number;
+  conversationContext?: ConversationTurn[];
+  currentTitle?: string;
   generationMode?: GenerationMode;
   targetPreference?: TargetPreference;
   previousTarget?: GenerationTarget;
   previousMode?: GenerationMode;
+}
+
+export interface ConversationTurn {
+  role: 'user' | 'assistant';
+  content: string;
 }
 
 export interface RollbackRequest {

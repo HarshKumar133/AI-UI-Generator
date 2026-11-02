@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { validateGeneratedArtifact, validateGeneratedCode } from '@/lib/validation';
 
 const GENERATED_FILE_PATH = path.join(process.cwd(), 'src', 'generated', 'GeneratedUI.tsx');
 
@@ -25,13 +26,28 @@ export async function POST(request: NextRequest) {
 
         // Ensure it has a proper default export
         if (!cleanCode.includes('export default')) {
-            cleanCode = cleanCode.replace(
-                /^(export )?function GeneratedUI/m,
-                'export default function GeneratedUI'
-            );
-            if (!cleanCode.includes('export default')) {
+            if (/^(?:export\s+)?function\s+GeneratedUI\b/m.test(cleanCode)) {
+                cleanCode = cleanCode.replace(/^(?:export\s+)?function\s+GeneratedUI\b/m, 'export default function GeneratedUI');
+            } else if (/^(?:export\s+)?(?:const|let|class)\s+GeneratedUI\b/m.test(cleanCode)) {
                 cleanCode += '\nexport default GeneratedUI;';
             }
+        }
+
+        const artifactValidation = validateGeneratedArtifact({ format: 'tsx', code: cleanCode }, 'tsx');
+        const codeValidation = validateGeneratedCode(cleanCode, { mode: 'creative', target: 'web' });
+        const validationErrors = [
+            ...artifactValidation.errors,
+            ...codeValidation.errors,
+        ];
+        if (validationErrors.length > 0) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: 'Generated preview was blocked because it failed schema, syntax, or safety validation.',
+                    diagnostics: [...artifactValidation.errors, ...codeValidation.errors].join('\n'),
+                },
+                { status: 422 }
+            );
         }
 
         // Write the file synchronously so it's on disk before we return

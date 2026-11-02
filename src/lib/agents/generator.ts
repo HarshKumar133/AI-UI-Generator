@@ -28,14 +28,14 @@ const ALL_COMPONENTS: ComponentType[] = [
 export interface GeneratorRunOptions {
   mode?: GenerationMode;
   target?: GenerationTarget;
+  userPrompt?: string;
 }
 
 // ---- PEAK-QUALITY PROMPT TEMPLATE ----
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const GENERATOR_SYSTEM_PROMPT = `You are the GENERATOR agent. Your output becomes real code rendered live in a browser preview panel.
 
-MISSION: Generate STUNNING, PREMIUM, PRODUCTION-QUALITY React/TSX UI. Every output must look like it belongs on Dribbble or a funded startup's product. Surprise and delight — no basic UI.
+MISSION: Generate a polished, distinctive, production-quality React/TSX UI tailored to the user's actual product and audience. Surprise and delight through excellent art direction, composition, typography, and detail—not a one-size-fits-all template.
 
 ════════════════════════
 STRICT IMPORT RULES
@@ -53,40 +53,44 @@ ${getComponentDescriptions()}
 PREMIUM DESIGN MANDATES
 ════════════════════════
 
-1. GRADIENT TEXT — All h1/h2 must use gradient text:
+1. ART DIRECTION — Read the request and choose a distinctive visual concept for this product and audience. Establish a memorable focal point, confident type scale, deliberate negative space, and concise palette. Avoid default dashboard/card-grid compositions unless the product truly calls for them; vary layouts with editorial structure, asymmetry, layered sections, or immersive hero treatments where appropriate.
+
+2. TYPOGRAPHY — Make headings expressive and legible. Gradient text is optional; use solid color when it creates a more refined hierarchy:
    style={{ background: 'linear-gradient(135deg, #15120f 0%, #da4f2f 65%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', margin: 0 }}
 
-2. AMBIENT BACKGROUND — Page root must have layered radial gradients:
+3. ATMOSPHERE — Give the page a deliberate background treatment; layered radial gradients are one option, not a required brand style:
    style={{ minHeight: '100vh', background: 'radial-gradient(ellipse at 15% 10%, rgba(218,79,47,0.1) 0%, transparent 45%), radial-gradient(ellipse at 85% 80%, rgba(240,122,96,0.08) 0%, transparent 40%), #fffdf9' }}
 
-3. GLASS SURFACE CARDS — Key containers:
+4. SURFACES — Use cards, glass, borders, and shadows selectively to build hierarchy; do not wrap every section in the same card:
    style={{ background: 'rgba(255,255,255,0.9)', border: '1px solid rgba(21,18,15,0.12)', borderRadius: 24, backdropFilter: 'blur(12px)' }}
 
-4. HOVER MICRO-ANIMATIONS — Every feature card MUST use:
+5. INTERACTION POLISH — Add a small number of purposeful hover/focus states with lightweight transitions. Do not add state or animation to every card; never make input wait on animation:
    const [h, setH] = React.useState(false);
    style={{ transform: h ? 'translateY(-5px) scale(1.015)' : 'none', transition: 'all 280ms cubic-bezier(0.34, 1.56, 0.64, 1)', boxShadow: h ? '0 24px 60px rgba(65,43,24,0.18), 0 0 0 1px rgba(218,79,47,0.16)' : '0 2px 12px rgba(65,43,24,0.1)' }}
 
-5. DENSE REAL DATA — No placeholder content. Real business-like data:
+6. CONTENT — Use specific, realistic content rather than lorem ipsum or generic placeholders. Match the amount of data to the screen; do not add unrelated widgets just to fill space:
    - Months: Jan–Dec, realistic numbers (revenue $120k–$500k, users 10k–200k)
    - Table rows: 5+ rows, each with 4+ columns of realistic data
    - Charts: 6-8 data points minimum with actual month/day labels
 
-6. TYPOGRAPHY SCALE:
+7. TYPE SCALE:
    - h1: fontSize '3rem+', fontWeight 900, letterSpacing '-0.04em', lineHeight 1.05
    - h2: fontSize '1.8rem', fontWeight 800, letterSpacing '-0.03em'
    - Subtitles: fontSize '1.1rem', color '#5d544b', lineHeight 1.65
    - Labels: fontSize '0.72rem', fontWeight 700, letterSpacing '0.06em', textTransform 'uppercase', color '#8a7e72'
 
-7. ACCESSIBILITY & RESPONSIVENESS:
+8. ACCESSIBILITY & RESPONSIVENESS:
    - Add descriptive 'aria-label' to icon-only buttons and elements without visible text.
    - Ensure layout structural components use semantic roles.
-   - Add inline media queries if necessary or flexbox folding for mobile layouts.
+   - Reflow without horizontal overflow using flexible widths, minmax()/auto-fit grids, wrapping rows, and clamped spacing. Avoid fixed-width panels and fixed-height page shells.
+   - Keep input responsive; prefer transform/opacity motion and respect reduced-motion preferences where practical.
 
-8. EMOJI ICONS — Use emoji liberally: section headers, nav items, stat icons, feature titles
+9. ICONOGRAPHY — Keep a consistent icon style; emoji are optional and should be used sparingly and intentionally.
 
 ════════════════════════
 COMPLETE PREMIUM EXAMPLE — Analytics Dashboard
 ════════════════════════
+This example demonstrates implementation completeness only. Do not copy its palette, gradients, emoji density, or dashboard composition unless those choices genuinely fit the user's request.
 \`\`\`tsx
 'use client';
 import React from 'react';
@@ -164,31 +168,36 @@ LAYOUT GUIDANCE
 ════════════════════════
 
 LANDING PAGE — "landing-page" layout:
-- Root: full-width radial gradient bg, overflow hidden
-- HERO: Giant h1 (4rem, gradient text) + subtitle + two CTA buttons, centered, 100px top padding
-- Subtle animated glow orb behind hero text:
+- Choose a visual concept, palette, and hero composition that fit the product; centered gradient headlines and glow orbs are optional, not defaults.
+- Make the first viewport complete with one clear message, useful CTA(s), and strong visual hierarchy.
+- Choose a distinctive feature presentation (editorial split, showcase, timeline, bento, or compact grid) rather than always using three cards.
+- Add a bottom CTA only when it supports the story; keep backgrounds and motion subtle and performant.
+- Example glow orb, if it genuinely suits the design:
   <div style={{ position: 'absolute', top: '20%', left: '50%', transform: 'translateX(-50%)', width: 600, height: 600, background: 'radial-gradient(circle, rgba(218,79,47,0.14) 0%, transparent 70%)', pointerEvents: 'none', borderRadius: '50%' }} />
-- 3-column feature Cards grid below hero
-- Bottom CTA with contrasting background: rgba(218,79,47,0.08), 1px solid rgba(218,79,47,0.2)
 
 LOGIN / SIGNUP — "centered" layout:
-- Root: centered flexbox, radial glow background
-- Glow orb behind the card: absolute, 400px circle, 12% brand-red opacity
-- Card: maxWidth 420px, light glass surface style, generous padding
-- Social auth buttons above email/pass for premium feel
+- Root: focused, responsive composition with a palette suited to the product.
+- Keep the form easy to scan, with comfortable touch targets and visible focus states.
+- Add social auth only when requested or clearly appropriate; don't invent providers.
 - Micro-copy beneath form: "By continuing you agree to our Terms"
 
 TODO / INTERACTIVE — "single-column" layout:
 - Use React.useState for items: const [items, setItems] = React.useState([...])
-- At least 5 placeholder items pre-populated
+- Seed a small number of plausible tasks only when useful; never use generic placeholder text.
 - Add: Input + Button row at top; Check + Delete per item
 - Completed items: opacity 0.4, textDecoration: 'line-through'
-- Empty state with encouraging emoji if list is empty
+- Use a clear, helpful empty state; emoji are optional.
 
 SETTINGS — "two-column" layout:
-- Left nav: list of setting categories with emoji icons (styled pills)
-- Right: Card per section with Toggle rows, Inputs, Selects
+- Left nav: concise category navigation with a consistent icon treatment only if useful.
+- Right: group related preferences with clear labels and descriptions; don't put every setting in an identical card.
 - Save Button at bottom-right with success Alert on save
+
+CLOCK / TIME DISPLAY:
+- Make current time the clear visual hero, with large, high-contrast digits in stable-width cells.
+- Update from the real clock every second and honor requested 12/24-hour format and timezone.
+- Do not add weather, calendar, alarm, or settings widgets unless asked; keep them secondary when requested.
+- Use a distinctive, product-appropriate digital design language and ensure digits are visible on first render.
 
 OUTPUT FORMAT:
 Return ONLY valid TSX code.
@@ -208,14 +217,30 @@ Rules:
 - Prefer composable patterns and modern responsive layout.
 - Include thoughtful motion/interaction states (hover, loading, transitions).
 - Prioritize accessibility and keyboard/semantic correctness.
+- Build responsive layouts that reflow cleanly on mobile, tablet, and desktop; keep controls usable and interactions snappy.
 
 Design baseline:
-- Light premium SaaS visual tone (cream/white surfaces, refined shadows, strong typography).
-- Accent interactions using brand-red style highlights.
-- Avoid generic placeholder UI; use realistic product content and data.
+- Choose a clear visual concept that fits the request. Make each screen feel art-directed and memorable, with a strong focal point, deliberate composition, distinctive typography, and a restrained color system.
+- Use layered surfaces, lighting, texture, gradients, and motion with purpose. Avoid default white cards on a blank background, generic admin templates, repetitive card grids, and decorative clutter.
+- Make the first viewport feel complete and polished. Use realistic content, meaningful empty states, and specific visual details that make the product feel real.
+- Keep contrast, type size, spacing, and responsive behavior strong enough that the design remains clear and usable at every viewport.
+- Motion should feel refined and lightweight; never block input, run endless layout-heavy animation, or make controls feel unresponsive.
+
+Deterministic output guardrails:
+- The generated output is checked against a runtime JSON Schema contract and parsed as an AST before it can be previewed.
+- Return syntactically valid TSX with one default-exported UI component. Keep imports explicit and use APIs that exist in the named packages.
+- Avoid eval, innerHTML, dangerouslySetInnerHTML, and direct document.write. Prefer React state, semantic elements, and inline styles or CSS classes.
+
+Clock, watch, and time-display requests:
+- Make the live time the clear visual hero, with large, high-contrast, tabular numerals that are readable immediately on first render.
+- Update the displayed time from the real clock every second and format it according to the requested 12-hour/24-hour preference and timezone.
+- Use a distinctive digital design language (for example a deep midnight surface, restrained neon accents, crisp separators, and subtle motion) instead of a generic white card.
+- Do not add weather, calendar, alarm, or settings widgets unless the prompt asks for them; if requested, keep them secondary to the clock.
+- Keep digit layout stable: every digit slot must reserve a visible width. Never place all digit text absolutely inside a zero-width inline container; prefer tabular numerals or a grid with fixed-width cells.
+- Ensure the initial render contains real digits, not blank placeholders, dots, or an animation-only state.
 `;
 
-const CREATIVE_EXPO_GENERATOR_SYSTEM_PROMPT = `You are a senior React Native + Expo app engineer.
+const CREATIVE_EXPO_GENERATOR_SYSTEM_PROMPT = `You are a senior React Native + Expo product designer and app engineer.
 
 Generate a high-quality mobile app code bundle for Android/iOS using Expo.
 
@@ -228,15 +253,17 @@ Rules:
   ...code...
 - Include at least App.tsx and 2 additional files (screens/components).
 - Use Expo-friendly libraries when needed (expo-router optional, react-native-reanimated optional, etc).
-- Add polished motion and interaction behavior suitable for SaaS apps.
-- Keep content realistic, UX-focused, and implementation-ready.
+- Give the app a distinctive visual concept, refined typography/color, and a memorable first screen; avoid generic repeated-card layouts.
+- Use mobile-first composition, ergonomic touch targets, and realistic navigation patterns.
+- Add lightweight, purposeful motion without blocking input or slowing interactions.
+- Keep content specific, UX-focused, and implementation-ready.
 `;
 
 // ---- SYSTEM PROMPT FOR INDIVIDUAL BLOCKS ----
 
 const BLOCK_GENERATOR_SYSTEM_PROMPT = `You are a UI BLOCK GENERATOR agent. Your job is to strictly build ONE piece of a larger UI.
 
-MISSION: Generate a STUNNING, PREMIUM, PRODUCTION-QUALITY React TSX component block.
+MISSION: Generate a polished, production-quality React TSX block with clear art direction that fits its description and the surrounding product. Make it memorable through composition, typography, color, and precise details—not decoration for decoration's sake.
 
 ════════════════════════
 STRICT IMPORT RULES
@@ -253,12 +280,11 @@ ${getComponentDescriptions()}
 ════════════════════════
 PREMIUM DESIGN MANDATES
 ════════════════════════
-1. GLASSMORPHISM CARDS:
-   style={{ background: 'rgba(255,255,255,0.9)', border: '1px solid rgba(21,18,15,0.12)', borderRadius: 24, backdropFilter: 'blur(12px)' }}
-2. HOVER MICRO-ANIMATIONS for cards/rows.
-3. DENSE REAL DATA: No placeholders. Real terminology.
-4. EMOJI ICONS: Use emojis for visual flair.
-5. RESPONSIVENESS & ACCESSIBILITY: Build flex/grid layouts that wrap cleanly on small screens. Ensure proper ARIA labeling on actionable elements.
+1. Choose an intentional palette and hierarchy suited to the product; avoid repetitive card stacks and generic dashboard styling.
+2. Use surfaces, borders, shadows, gradients, or texture selectively to emphasize important content.
+3. Keep content realistic and specific without adding filler or unrelated widgets.
+4. Build responsive flex/grid layouts that shrink and wrap cleanly; avoid fixed widths and horizontal overflow.
+5. Use semantic markup, visible focus states, accessible names, and a small number of lightweight interactions. Emojis and animation are optional, never mandatory.
 
 OUTPUT FORMAT:
 Return ONLY valid TSX valid.
@@ -266,7 +292,7 @@ Do NOT start with 'use client';! Just output the function.
 No markdown fences. No extra text. Just code.`;
 
 // ---- SYSTEM PROMPT FOR SHELL (LAYOUT) ----
-const SHELL_GENERATOR_SYSTEM_PROMPT = `You are the SHELL GENERATOR agent. Your job is to arrange and layout a set of existing React component blocks into a stunning page.
+const SHELL_GENERATOR_SYSTEM_PROMPT = `You are the SHELL GENERATOR agent. Your job is to arrange existing React component blocks into a polished, memorable page.
 
 MISSION: Create the master layout shell that stitches the blocks together seamlessly.
 
@@ -281,10 +307,10 @@ STRICT IMPORT RULES
 ════════════════════════
 PREMIUM DESIGN MANDATES
 ════════════════════════
-1. AMBIENT BACKGROUND on the root div:
-   style={{ minHeight: '100vh', background: 'radial-gradient(ellipse at 15% 10%, rgba(218,79,47,0.1) 0%, transparent 45%), radial-gradient(ellipse at 85% 80%, rgba(240,122,96,0.08) 0%, transparent 40%), #fffdf9', color: '#15120f', display: 'flex' }}
-2. GRADIENT TEXT for any page headers you create.
-3. Handle flex/grid alignments properly so sidebars stick and main content areas scroll.
+1. Establish a clear visual hierarchy and a page background/palette that suits the request; do not default to the warm orange sample style.
+2. Create deliberate composition with useful spacing, a clear focal point, and varied section treatments; avoid making every block look like the same card.
+3. Handle flex/grid alignment responsively, allow content to scroll naturally, and prevent fixed-width layouts or horizontal overflow.
+4. Keep navigation and controls accessible and interactive without blocking input.
 
 OUTPUT FORMAT:
 Return ONLY valid TSX valid.
@@ -307,7 +333,7 @@ ${JSON.stringify(block.components, null, 2)}
 
 REQUIREMENTS:
 1. Component name MUST be: ${pascalName} (default export)
-2. Use DENSE, REALISTIC data matching the description.
+2. Use realistic, specific content matching the description, without filler.
 3. Apply premium design mandates.
 4. Return ONLY React TSX code. NO 'use client' header. No markdown.`;
 
@@ -352,7 +378,7 @@ REQUIREMENTS:
 1. First line: 'use client';
 2. Component Name: GeneratedUI (default export)
 3. Arrange all the available blocks properly using flex/grid.
-4. Apply the ambient background to the root container.
+4. Give the root container a cohesive background suited to the design brief.
 5. Render ALL available blocks exactly as named (e.g. <SidebarBlock />). 
 6. Return ONLY React TSX code. No markdown fences.
 ${getLayoutGuidance(plan.layout)}`;
@@ -380,12 +406,49 @@ export async function runGenerator(
 ): Promise<GeneratorOutput> {
   const mode = options.mode ?? 'creative';
   const target = options.target ?? plan.target ?? 'web';
+  const userPrompt = options.userPrompt;
 
   if (mode === 'deterministic') {
     return runDeterministicGenerator(plan, onEvent);
   }
 
-  return runCreativeGenerator(plan, target, onEvent);
+  return runCreativeGenerator(plan, target, userPrompt, onEvent);
+}
+
+export async function repairGeneratedCode(
+  candidate: string,
+  diagnostics: string,
+  options: { mode: GenerationMode; target: GenerationTarget; userPrompt?: string }
+): Promise<string> {
+  const { mode, target, userPrompt } = options;
+  const systemPrompt = target === 'expo-rn'
+    ? CREATIVE_EXPO_GENERATOR_SYSTEM_PROMPT
+    : mode === 'deterministic'
+      ? GENERATOR_SYSTEM_PROMPT
+      : CREATIVE_WEB_GENERATOR_SYSTEM_PROMPT;
+  const format = target === 'expo-rn'
+    ? 'a complete Expo bundle using // FILE: path markers, including App.tsx'
+    : 'a complete TSX file with a default-exported GeneratedUI component';
+  const userMessage = `Repair the generated implementation so it passes the required schema and syntax parser.
+
+Original request: ${userPrompt || 'Build the planned application'}
+Target: ${target}
+Required output: ${format}
+
+Exact validation/compiler diagnostics from the previous attempt (preserve these verbatim while reasoning about the fix):
+${diagnostics}
+
+Previous candidate:
+\`\`\`tsx
+${candidate}
+\`\`\`
+
+Return the complete corrected implementation, not a patch. Fix every reported diagnostic while preserving the intended design and functionality. Do not add fallback blank screens or omit parts of the app. Output code only.`;
+  const response = await callGemini(userMessage, systemPrompt);
+  const normalized = stripCodeFences(response);
+  return target === 'expo-rn'
+    ? ensureExpoBundleShape(normalized)
+    : ensureGeneratedUIExports(normalized, 'tsx');
 }
 
 async function runDeterministicGenerator(plan: PlannerOutput, onEvent?: (e: GenerationEvent) => void): Promise<GeneratorOutput> {
@@ -447,6 +510,7 @@ async function runDeterministicGenerator(plan: PlannerOutput, onEvent?: (e: Gene
 async function runCreativeGenerator(
   plan: PlannerOutput,
   target: GenerationTarget,
+  userPrompt: string | undefined,
   onEvent?: (e: GenerationEvent) => void
 ): Promise<GeneratorOutput> {
   if (onEvent) {
@@ -459,8 +523,8 @@ async function runCreativeGenerator(
   }
 
   const primaryCode = target === 'expo-rn'
-    ? await generateCreativeExpoCode(plan)
-    : await generateCreativeWebCode(plan);
+    ? await generateCreativeExpoCode(plan, userPrompt)
+    : await generateCreativeWebCode(plan, userPrompt);
 
   const selectedLibraries = extractImportSources(primaryCode);
   const metadata = {
@@ -490,10 +554,11 @@ async function runCreativeGenerator(
   };
 }
 
-async function generateCreativeWebCode(plan: PlannerOutput): Promise<string> {
+async function generateCreativeWebCode(plan: PlannerOutput, userPrompt?: string): Promise<string> {
   const userMessage = `Build the app described by this creative plan.
 
 Target: web
+Original user request: ${userPrompt || 'N/A'}
 Layout hint: ${plan.layout}
 Reasoning: ${plan.reasoning}
 Design brief: ${plan.designBrief || 'Premium SaaS product experience'}
@@ -516,10 +581,11 @@ Output only TSX code for GeneratedUI.`;
   return ensureGeneratedUIExports(code, 'tsx');
 }
 
-async function generateCreativeExpoCode(plan: PlannerOutput): Promise<string> {
+async function generateCreativeExpoCode(plan: PlannerOutput, userPrompt?: string): Promise<string> {
   const userMessage = `Build an Expo React Native code bundle from this plan.
 
 Target: expo-rn
+Original user request: ${userPrompt || 'N/A'}
 Reasoning: ${plan.reasoning}
 Design brief: ${plan.designBrief || 'Premium SaaS mobile app'}
 Wireframe plan:
@@ -555,8 +621,8 @@ function ensureGeneratedUIExports(code: string, kind: 'tsx' | 'expo'): string {
     if (!/export\s+default\s+function\s+GeneratedUI|export\s+default\s+GeneratedUI/.test(normalized)) {
       if (/function\s+GeneratedUI\s*\(/.test(normalized)) {
         normalized = normalized.replace(/function\s+GeneratedUI\s*\(/, 'export default function GeneratedUI(');
-      } else {
-        normalized += '\n\nexport default function GeneratedUI() { return null; }\n';
+      } else if (/\b(?:const|let|class)\s+GeneratedUI\b/.test(normalized)) {
+        normalized += '\n\nexport default GeneratedUI;\n';
       }
     }
   }
@@ -753,15 +819,15 @@ function normalizeBlockDeclaration(code: string, expectedName: string): string {
 
 function getLayoutGuidance(layout: string): string {
   const guides: Record<string, string> = {
-    'single-column': 'Stack components vertically in a centered column (max 800px). Ambient radial bg. Dense content.',
-    'two-column': 'Two columns via CSS grid. Left: navigation list. Right: main content area.',
-    'sidebar-layout': 'Sidebar (fixed left, 220px) + scrollable main. Use our Sidebar component.',
-    'dashboard': 'Navbar at top, Sidebar left, main content area with KPI grid + Charts + Table.',
-    'centered': 'Content centered horizontally and vertically. Glow orb effect behind the card.',
-    'full-width': 'Full-width content with sections. Giant hero, features grid, CTA.',
-    'landing-page': 'Hero (4rem gradient h1 + 2 CTAs) + features grid + testimonials + CTA section.',
-    'form-page': 'Single-column form layout, centered Card, clear input hierarchy.',
-    'app-shell': 'Full-height: Navbar + Sidebar + main scrollable area. Like a real SaaS app.',
+    'single-column': 'Use a readable, responsive content column with a distinctive hierarchy and appropriate density.',
+    'two-column': 'Use responsive CSS grid; collapse to one column on narrow screens and keep the main content clear.',
+    'sidebar-layout': 'Use responsive sidebar + scrollable main content; collapse or adapt navigation on narrow screens.',
+    'dashboard': 'Build an information-rich but focused dashboard; show only relevant metrics and vary section composition.',
+    'centered': 'Center the primary task or content with refined spacing; avoid a generic glow-card template.',
+    'full-width': 'Use full-width sections with a product-specific hero and intentional composition.',
+    'landing-page': 'Create a memorable hero and a distinctive product showcase; choose section layout to fit the story.',
+    'form-page': 'Use a clear, responsive form layout with legible labels, visible focus, and a compact visual hierarchy.',
+    'app-shell': 'Create a responsive application shell with accessible navigation and a naturally scrollable main area.',
   };
   return guides[layout] || guides['single-column'];
 }
