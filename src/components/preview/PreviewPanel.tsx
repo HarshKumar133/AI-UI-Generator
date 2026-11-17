@@ -110,11 +110,6 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({
                     <div className={styles.emptyHint}>
                         Your generated UI will be rendered here in real-time.
                     </div>
-                    <div className={styles.emptySteps}>
-                        <div className={styles.emptyStep}>1. Describe the interface in chat.</div>
-                        <div className={styles.emptyStep}>2. Review the generated code and preview.</div>
-                        <div className={styles.emptyStep}>3. Refine it in a follow-up message.</div>
-                    </div>
                 </div>
             </div>
         );

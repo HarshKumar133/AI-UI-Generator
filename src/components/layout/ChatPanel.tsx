@@ -7,16 +7,9 @@ import {
   MessageSquare,
   Sparkles,
   Pencil,
-  BarChart3,
-  ShoppingCart,
-  ClipboardList,
-  Briefcase,
-  TrendingUp,
-  Target,
   Bot,
   Brain,
   Send,
-  ChevronRight,
   AlertTriangle,
   KeyRound,
   RefreshCw,
@@ -69,15 +62,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const lastUserPrompt = [...messages].reverse().find(m => m.role === 'user')?.content;
 
-  const suggestions = [
-    { icon: BarChart3, label: 'Analytics Dashboard', color: 'emerald' },
-    { icon: ShoppingCart, label: 'E-Commerce Admin', color: 'blue' },
-    { icon: ClipboardList, label: 'Project Manager', color: 'purple' },
-    { icon: Briefcase, label: 'CRM Interface', color: 'amber' },
-    { icon: TrendingUp, label: 'Finance Tracker', color: 'rose' },
-    { icon: Target, label: 'Task Board', color: 'cyan' },
-  ];
-
   return (
     <div className={styles.chatPanel}>
       {/* Header */}
@@ -107,35 +91,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               <Sparkles size={42} className={styles.mainSparkle} />
             </div>
             <div className={styles.emptyTitle}>What do you want to build?</div>
-            <div className={styles.emptyHint}>
-              Describe any UI in natural language — dashboards, forms, admin panels — and watch it come to life.
-            </div>
-
-            <div className={styles.suggestionsLabel}>
-              <span className={styles.suggestionsLine} />
-              <span>TRY AN EXAMPLE</span>
-              <span className={styles.suggestionsLine} />
-            </div>
-
-            <div className={styles.suggestions}>
-              {suggestions.map((s) => {
-                const Icon = s.icon;
-                return (
-                  <button
-                    key={s.label}
-                    className={`${styles.suggestionChip} ${styles[`chip_${s.color}`] || ''}`}
-                    onClick={() => {
-                      onSendMessage(s.label);
-                    }}
-                    disabled={isLoading}
-                  >
-                    <Icon size={15} className={styles.chipIcon} />
-                    <span className={styles.chipLabel}>{s.label}</span>
-                    <ChevronRight size={14} className={styles.chipArrow} />
-                  </button>
-                );
-              })}
-            </div>
           </div>
         ) : (
           /* ── Message List ── */

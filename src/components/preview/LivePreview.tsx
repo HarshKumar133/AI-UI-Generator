@@ -38,6 +38,10 @@ const IFRAME_BASE_CSS = `
   input, select, textarea { font-family: inherit; }
 `;
 
+// Changes force Fast Refresh to rerun an already-open preview with the latest
+// sandbox runtime instead of retaining a prior failed iframe callback.
+const PREVIEW_RUNTIME_REVISION = 'scoped-ui-kit-v2';
+
 // All UI components as self-contained inline JS (no CSS modules, all inline styles)
 const COMPONENT_REGISTRY_JS = `
 // ── COMPONENT REGISTRY (inline, no CSS modules) ──
@@ -345,8 +349,31 @@ const Tabs = ({ items = [], activeTab: controlled, onChange }) => {
 };
 `;
 
+const RUNTIME_COMPONENT_NAMES = [
+  'Button', 'Card', 'Input', 'Table', 'Modal', 'Sidebar', 'Navbar', 'Chart',
+  'Badge', 'Avatar', 'Progress', 'Stat', 'Alert', 'Toggle', 'Tabs', 'Divider', 'Select',
+] as const;
+
+function getRuntimeUiBindings(code: string): string[] {
+  const bindingPattern = /import\s+\{([^}]+)\}\s+from\s+['"]@\/components\/ui(?:\/[^'"]+)?['"];?/g;
+  const allowed = new Set<string>(RUNTIME_COMPONENT_NAMES);
+  const bindings = new Set<string>();
+
+  for (const match of code.matchAll(bindingPattern)) {
+    for (const entry of match[1].split(',')) {
+      const normalized = entry.trim().replace(/^type\s+/, '');
+      if (!normalized) continue;
+      const [imported, alias] = normalized.split(/\s+as\s+/);
+      if (!allowed.has(imported)) continue;
+      bindings.add(alias && alias !== imported ? `${imported}: ${alias}` : imported);
+    }
+  }
+  return [...bindings];
+}
+
 /** Build TSX-mode iframe HTML (Babel transpiles the TSX code) */
 function buildIframeHTML(code: string): string {
+  const uiBindings = getRuntimeUiBindings(code);
   const transformedCode = code
     .replace(/'use client';\s*/g, '')
     .replace(/"use client";\s*/g, '')
@@ -362,13 +389,21 @@ function buildIframeHTML(code: string): string {
     .replace(/^\s*export\s+default\s+function\s+GeneratedUI\b/m, 'function GeneratedUI')
     .replace(/^\s*export\s+default\s+GeneratedUI\s*;?\s*$/m, '')
     .replace(/^\s*export\s+(?=(?:const|let|function|class|type|interface)\b)/gm, '');
+  const runtimeUiPrelude = uiBindings.length > 0
+    ? `
+const RuntimeUI = (() => {
+${COMPONENT_REGISTRY_JS}
+  return { ${RUNTIME_COMPONENT_NAMES.join(', ')} };
+})();
+const { ${uiBindings.join(', ')} } = RuntimeUI;`
+    : '';
   const previewProgram = `
 const {
   useState, useEffect, useCallback, useRef, useMemo,
   useReducer, useContext, useLayoutEffect, useId,
   createContext, forwardRef, memo, Fragment,
 } = React;
-${COMPONENT_REGISTRY_JS}
+${runtimeUiPrelude}
 ${transformedCode}
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(React.createElement(GeneratedUI));`;
@@ -401,7 +436,10 @@ window.addEventListener('unhandledrejection', reportPreviewError);
 try {
   if (!window.React || !window.ReactDOM || !window.Babel) throw new Error('The preview runtime did not finish loading.');
   const source = ${serializedProgram};
-  const compiled = window.Babel.transform(source, { presets: ['react', 'typescript'] }).code;
+  const compiled = window.Babel.transform(source, {
+    filename: 'GeneratedUI.tsx',
+    presets: ['react', 'typescript'],
+  }).code;
   Function(compiled)();
 } catch (error) {
   reportPreviewError(error);
@@ -472,7 +510,7 @@ const LivePreview: React.FC<LivePreviewProps> = ({ code, outputMode = 'tsx', tit
 
     iframe.src = url;
     return () => window.removeEventListener('message', handleMessage);
-  }, [code, outputMode]);
+  }, [code, outputMode, PREVIEW_RUNTIME_REVISION]);
 
   useEffect(() => {
     let cleanup: void | (() => void);

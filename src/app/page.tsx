@@ -20,6 +20,9 @@ import {
   FolderOpen,
   Link2,
   X,
+  Plus,
+  Pencil,
+  Check,
 } from 'lucide-react';
 
 type ViewTab = 'split' | 'code' | 'preview';
@@ -212,6 +215,9 @@ function WorkspaceHome({ isAuthLoaded, isSignedIn, userId }: { isAuthLoaded: boo
   const [isProjectLibraryOpen, setIsProjectLibraryOpen] = useState(false);
   const [isProjectsLoading, setIsProjectsLoading] = useState(false);
   const [shareStatus, setShareStatus] = useState<string>();
+  const [isRenamingProject, setIsRenamingProject] = useState(false);
+  const [projectNameDraft, setProjectNameDraft] = useState('');
+  const [isSavingProjectName, setIsSavingProjectName] = useState(false);
   const [activeAgents, setActiveAgents] = useState<AgentEventState[]>([]);
   const [workspaceRestored, setWorkspaceRestored] = useState(false);
 
@@ -507,6 +513,60 @@ function WorkspaceHome({ isAuthLoaded, isSignedIn, userId }: { isAuthLoaded: boo
     }
   }, [projectId]);
 
+  const handleNewChat = useCallback(() => {
+    setMessages([]);
+    setCurrentCode('');
+    setCurrentHtml('');
+    setOutputMode('tsx');
+    setComponentList([]);
+    setPreviewLayout('single-column');
+    setCurrentMode('creative');
+    setCurrentTarget('web');
+    setDownloadPayload(undefined);
+    setCurrentVersion(null);
+    setVersions([]);
+    setPreviewError(undefined);
+    setCurrentTitle('');
+    setProjectId(undefined);
+    setShareStatus(undefined);
+    setIsRenamingProject(false);
+    setProjectNameDraft('');
+    setActiveTab('split');
+    versionCounterRef.current = 0;
+  }, []);
+
+  const startRenameProject = useCallback(() => {
+    setProjectNameDraft(currentTitle || 'Untitled project');
+    setIsRenamingProject(true);
+  }, [currentTitle]);
+
+  const saveProjectName = useCallback(async () => {
+    const title = projectNameDraft.trim();
+    if (!title) return;
+    if (!projectId) {
+      setCurrentTitle(title);
+      setIsRenamingProject(false);
+      return;
+    }
+    setIsSavingProjectName(true);
+    try {
+      const response = await fetch(`/api/projects/${projectId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title }),
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload.success) throw new Error(payload.error || 'Could not rename this project.');
+      setCurrentTitle(payload.data.title);
+      setProjects((items) => items.map((item) => item.id === projectId ? { ...item, title: payload.data.title, updatedAt: payload.data.updatedAt } : item));
+      setIsRenamingProject(false);
+    } catch (error) {
+      setPreviewError(error instanceof Error ? error.message : 'Could not rename this project.');
+    } finally {
+      setIsSavingProjectName(false);
+    }
+  }, [projectId, projectNameDraft]);
+
   // ── MAIN SEND HANDLER ──
   const handleSendMessage = useCallback(async (message: string) => {
     if (!isAuthLoaded || !isSignedIn) {
@@ -793,6 +853,31 @@ function WorkspaceHome({ isAuthLoaded, isSignedIn, userId }: { isAuthLoaded: boo
           <span className={styles.topBarBrandSub}>Describe it. Build it.</span>
         </div>
         <div className={styles.topBarActions}>
+          {isRenamingProject ? (
+            <form
+              onSubmit={(event) => { event.preventDefault(); void saveProjectName(); }}
+              style={{ display: 'flex', alignItems: 'center', gap: 5 }}
+            >
+              <input
+                autoFocus
+                aria-label="Project name"
+                value={projectNameDraft}
+                onChange={(event) => setProjectNameDraft(event.target.value)}
+                onKeyDown={(event) => { if (event.key === 'Escape') setIsRenamingProject(false); }}
+                style={{ width: 180, border: '1px solid rgba(21,18,15,0.2)', borderRadius: 8, background: '#fff', color: '#15120f', font: '600 12px var(--font-sans)', padding: '6px 8px' }}
+              />
+              <button className={styles.topBarButton} disabled={isSavingProjectName} aria-label="Save project name" title="Save project name">
+                <Check size={13} /> Save
+              </button>
+            </form>
+          ) : (
+            <button className={styles.topBarButton} onClick={startRenameProject} title="Rename project" id="rename-project-button">
+              <Pencil size={13} /> {currentTitle || 'Untitled chat'}
+            </button>
+          )}
+          <button className={styles.topBarButton} onClick={handleNewChat} disabled={isLoading} id="new-chat-button" title="Start a new chat">
+            <Plus size={14} /> New chat
+          </button>
           {currentVersion !== null && (
             <span className={styles.versionTag}>v{currentVersion}</span>
           )}
@@ -831,7 +916,7 @@ function WorkspaceHome({ isAuthLoaded, isSignedIn, userId }: { isAuthLoaded: boo
               <RotateCcw size={13} /> Regenerate
             </button>
           )}
-          <button className={`${styles.topBarButton} ${styles.topBarButtonDanger}`} onClick={handleClear} id="clear-button">
+          <button className={`${styles.topBarButton} ${styles.topBarButtonDanger}`} onClick={handleClear} id="clear-button" title="Clear this chat from the screen">
             <Trash2 size={13} /> Clear
           </button>
           <AuthControls />

@@ -198,6 +198,19 @@ export async function deleteProject(ownerId: string, projectId: string): Promise
   if (!project) throw new ProjectAccessError();
 }
 
+export async function renameProject(ownerId: string, projectId: string, title: string): Promise<Project> {
+  assertProjectId(projectId);
+  const normalizedTitle = normalizeTitle(title);
+  const db = getDb();
+  const [project] = await db
+    .update(projects)
+    .set({ title: normalizedTitle, updatedAt: new Date() })
+    .where(and(eq(projects.id, projectId), eq(projects.ownerId, ownerId)))
+    .returning();
+  if (!project) throw new ProjectAccessError();
+  return project;
+}
+
 export async function getSharedProject(token: string): Promise<{ project: Project; version: ProjectVersion }> {
   assertProjectId(token);
   const db = getDb();

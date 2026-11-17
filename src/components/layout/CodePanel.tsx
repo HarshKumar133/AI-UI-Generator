@@ -48,7 +48,7 @@ export const CodePanel: React.FC<CodePanelProps> = ({
           <div className={styles.headerLeft}>
             <FileCode2 size={15} className={styles.headerIconSvg} />
             <span className={styles.headerTitle}>Code</span>
-            <span className={styles.fileName}>GeneratedUI.tsx</span>
+            {/* <span className={styles.fileName}>GeneratedUI.tsx</span> */}
           </div>
         </div>
         <div className={styles.emptyState}>
@@ -103,11 +103,7 @@ export const CodePanel: React.FC<CodePanelProps> = ({
           </div>
           <div className={styles.emptyTitle}>No code generated yet</div>
           <div className={styles.emptyHint}>
-            Generated `GeneratedUI.tsx` appears here. Start with a clear prompt like:
-          </div>
-          <div className={styles.quickPrompt}>
-            <Wand2 size={13} />
-            Build a reporting dashboard with KPI cards, trend chart, and recent reports table.
+            Generated GeneratedUI.tsx appears here.
           </div>
         </div>
       </div>
