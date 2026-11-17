@@ -1,8 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import styles from '@/styles/components/codePanel.module.css';
 import {
   FileCode2,
@@ -143,19 +141,7 @@ export const CodePanel: React.FC<CodePanelProps> = ({
       {/* Code Display */}
       <div className={styles.codeContainer}>
         <div className={styles.codeWrapper}>
-          <SyntaxHighlighter
-            language="tsx"
-            style={oneLight}
-            showLineNumbers
-            wrapLines
-            customStyle={{
-              margin: 0,
-              background: '#fffaf4',
-              fontSize: '0.82rem',
-            }}
-          >
-            {code}
-          </SyntaxHighlighter>
+          <pre><code>{code}</code></pre>
         </div>
       </div>
 

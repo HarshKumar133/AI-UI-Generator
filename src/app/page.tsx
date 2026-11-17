@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import styles from '@/styles/components/appLayout.module.css';
 import { ChatPanel } from '@/components/layout/ChatPanel';
 import { CodePanel } from '@/components/layout/CodePanel';
 import { VersionHistory } from '@/components/layout/VersionHistory';
 import { PreviewPanel } from '@/components/preview/PreviewPanel';
-import { LandingPage } from '@/components/home/LandingPage';
-import { ChatMessage, GenerationResult, ComponentNode, VersionEntry, AgentEventState, GenerationMode, GenerationTarget, ConversationTurn } from '@/types';
-import { Template } from '@/lib/templates';
+import { AuthControls } from '@/components/layout/AuthControls';
+import { ChatMessage, GenerationResult, VersionEntry, AgentEventState, GenerationMode, GenerationTarget, ConversationTurn, ExplainerOutput, PlannerOutput, PreviewArtifact } from '@/types';
 import {
   Sparkles,
   PanelLeft,
@@ -17,24 +17,66 @@ import {
   Clock,
   RotateCcw,
   Trash2,
+  FolderOpen,
+  Link2,
+  X,
 } from 'lucide-react';
 
 type ViewTab = 'split' | 'code' | 'preview';
 const WORKSPACE_STORAGE_KEY = 'simply-ui-workspace-v1';
+const AUTH_SESSION_USER_KEY = 'simply-ui-auth-session-user-v1';
+const PENDING_ARCHIVES_STORAGE_KEY = 'simply-ui-pending-archives-v1';
 
 interface SavedWorkspaceState {
   messages: ChatMessage[];
   currentCode: string;
   currentHtml: string;
-  outputMode: 'tsx' | 'html' | 'nextjs';
+  outputMode: 'tsx' | 'html';
   componentList: string[];
-  previewComponents: ComponentNode[];
   previewLayout: string;
   currentMode: GenerationMode;
   currentTarget: GenerationTarget;
   currentVersion: number | null;
   currentTitle: string;
+  projectId?: string;
   activeTab: ViewTab;
+}
+
+interface ProjectSummary {
+  id: string;
+  title: string;
+  currentVersion: number;
+  updatedAt: string;
+}
+
+interface StoredProjectVersion {
+  versionNumber: number;
+  prompt: string;
+  source: string;
+  sourceType: 'tsx' | 'html' | 'expo';
+  metadata: unknown;
+  createdAt: string;
+}
+
+interface StoredProjectDetail {
+  project: {
+    id: string;
+    title: string;
+    currentVersion: number;
+    sourceType: 'tsx' | 'html' | 'expo';
+  };
+  version?: StoredProjectVersion;
+  versions: StoredProjectVersion[];
+  messages: Array<Pick<ChatMessage, 'role' | 'content' | 'timestamp'> & { id: string }>;
+}
+
+interface StoredVersionMetadata {
+  componentList?: unknown;
+  explanation?: ExplainerOutput;
+  mode?: GenerationMode;
+  plan?: PlannerOutput;
+  previewArtifact?: PreviewArtifact;
+  target?: GenerationTarget;
 }
 
 const STANDALONE_HTML_KEYWORDS = [
@@ -67,15 +109,93 @@ function toKebabCase(value: string): string {
     .slice(0, 50) || 'generated-app';
 }
 
+function asStoredMetadata(value: unknown): StoredVersionMetadata {
+  return value && typeof value === 'object' ? value as StoredVersionMetadata : {};
+}
+
+function toVersionEntry(version: StoredProjectVersion): VersionEntry {
+  const metadata = asStoredMetadata(version.metadata);
+  return {
+    version: version.versionNumber,
+    code: version.source,
+    sourceType: version.sourceType,
+    previewHtml: metadata.previewArtifact?.kind === 'html' ? metadata.previewArtifact.content : undefined,
+    prompt: version.prompt,
+    plan: metadata.plan ?? { layout: 'single-column', reasoning: 'Saved project version.' },
+    explanation: metadata.explanation ?? { explanation: 'Saved project version.', componentChoices: [], layoutReason: '' },
+    timestamp: version.createdAt,
+  };
+}
+
+async function archiveWorkspaceOnSignIn(saved: Partial<SavedWorkspaceState>): Promise<void> {
+  if (saved.projectId || (!saved.currentCode && !saved.currentHtml)) return;
+  const messages = Array.isArray(saved.messages) ? saved.messages : [];
+  const latestPrompt = [...messages].reverse().find((message) => message.role === 'user')?.content || 'Saved workspace';
+  const assistantMessage = [...messages].reverse().find((message) => message.role === 'assistant')?.content;
+  const source = saved.currentHtml || saved.currentCode || '';
+  const sourceType = saved.currentHtml ? 'html' : saved.currentTarget === 'expo-rn' ? 'expo' : 'tsx';
+
+  const response = await fetch('/api/projects', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      title: saved.currentTitle || latestPrompt,
+      prompt: latestPrompt,
+      source,
+      sourceType,
+      assistantMessage,
+      metadata: {
+        mode: saved.currentMode || 'creative',
+        target: saved.currentTarget || 'web',
+      },
+    }),
+  });
+  if (!response.ok) throw new Error('Could not archive the previous workspace.');
+}
+
+function queuePendingArchive(saved: Partial<SavedWorkspaceState>): void {
+  try {
+    const queued = JSON.parse(sessionStorage.getItem(PENDING_ARCHIVES_STORAGE_KEY) || '[]') as Partial<SavedWorkspaceState>[];
+    sessionStorage.setItem(PENDING_ARCHIVES_STORAGE_KEY, JSON.stringify([...queued.slice(-4), saved]));
+  } catch (error) {
+    console.warn('[workspace] Could not queue the previous workspace:', error);
+  }
+}
+
+async function flushPendingArchives(): Promise<void> {
+  const queued = JSON.parse(sessionStorage.getItem(PENDING_ARCHIVES_STORAGE_KEY) || '[]') as Partial<SavedWorkspaceState>[];
+  if (!Array.isArray(queued) || queued.length === 0) return;
+  const unsaved: Partial<SavedWorkspaceState>[] = [];
+  for (const workspace of queued) {
+    try {
+      await archiveWorkspaceOnSignIn(workspace);
+    } catch {
+      unsaved.push(workspace);
+    }
+  }
+  if (unsaved.length === 0) sessionStorage.removeItem(PENDING_ARCHIVES_STORAGE_KEY);
+  else sessionStorage.setItem(PENDING_ARCHIVES_STORAGE_KEY, JSON.stringify(unsaved));
+}
+
 export default function Home() {
+  if (/^pk_(test|live)_[A-Za-z0-9]+$/.test(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || '')) {
+    return <AuthenticatedHome />;
+  }
+  return <WorkspaceHome isAuthLoaded isSignedIn />;
+}
+
+function AuthenticatedHome() {
+  const { isLoaded: isAuthLoaded, isSignedIn, userId } = useAuth();
+  return <WorkspaceHome isAuthLoaded={isAuthLoaded} isSignedIn={isSignedIn} userId={userId} />;
+}
+
+function WorkspaceHome({ isAuthLoaded, isSignedIn, userId }: { isAuthLoaded: boolean; isSignedIn: boolean | undefined; userId?: string | null }) {
   // Generation state
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [currentCode, setCurrentCode] = useState('');
   const [currentHtml, setCurrentHtml] = useState(''); // for full-app HTML mode
-  const [outputMode, setOutputMode] = useState<'tsx' | 'html' | 'nextjs'>('tsx');
-  const [previewKey, setPreviewKey] = useState(0); // increments to force iframe reload
+  const [outputMode, setOutputMode] = useState<'tsx' | 'html'>('tsx');
   const [componentList, setComponentList] = useState<string[]>([]);
-  const [previewComponents, setPreviewComponents] = useState<ComponentNode[]>([]);
   const [previewLayout, setPreviewLayout] = useState('single-column');
   const [currentMode, setCurrentMode] = useState<GenerationMode>('creative');
   const [currentTarget, setCurrentTarget] = useState<GenerationTarget>('web');
@@ -87,44 +207,86 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<ViewTab>('split');
   const [previewError, setPreviewError] = useState<string | undefined>();
   const [currentTitle, setCurrentTitle] = useState('');
+  const [projectId, setProjectId] = useState<string>();
+  const [projects, setProjects] = useState<ProjectSummary[]>([]);
+  const [isProjectLibraryOpen, setIsProjectLibraryOpen] = useState(false);
+  const [isProjectsLoading, setIsProjectsLoading] = useState(false);
+  const [shareStatus, setShareStatus] = useState<string>();
   const [activeAgents, setActiveAgents] = useState<AgentEventState[]>([]);
-  const [workspaceEntering, setWorkspaceEntering] = useState(false);
   const [workspaceRestored, setWorkspaceRestored] = useState(false);
 
   const versionCounterRef = useRef(0);
-  const hasEnteredWorkspaceRef = useRef(false);
 
-  // Generated source updates can trigger a full browser reload in Next.js dev mode.
-  // Keep the active workspace in this tab so a reload returns to the generated result.
   useEffect(() => {
-    try {
-      const stored = sessionStorage.getItem(WORKSPACE_STORAGE_KEY);
-      if (stored) {
-        const saved = JSON.parse(stored) as Partial<SavedWorkspaceState>;
+    if (!isAuthLoaded) return;
+    let active = true;
+
+    const restore = async () => {
+      try {
+        const stored = sessionStorage.getItem(WORKSPACE_STORAGE_KEY);
+        const saved = stored ? JSON.parse(stored) as Partial<SavedWorkspaceState> : undefined;
+        const previousUserId = sessionStorage.getItem(AUTH_SESSION_USER_KEY);
+        const isNewLogin = Boolean(isSignedIn && userId && previousUserId !== userId);
+
+        if (isSignedIn && userId) await flushPendingArchives();
+
+        if (isNewLogin) {
+          if (saved) {
+            try {
+              await archiveWorkspaceOnSignIn(saved);
+            } catch (error) {
+              console.warn('[workspace] Could not archive the previous workspace:', error);
+              queuePendingArchive(saved);
+            }
+          }
+          sessionStorage.removeItem(WORKSPACE_STORAGE_KEY);
+          sessionStorage.setItem(AUTH_SESSION_USER_KEY, userId!);
+          if (!active) return;
+          setMessages([]);
+          setCurrentCode('');
+          setCurrentHtml('');
+          setOutputMode('tsx');
+          setComponentList([]);
+          setPreviewLayout('single-column');
+          setCurrentMode('creative');
+          setCurrentTarget('web');
+          setDownloadPayload(undefined);
+          setCurrentVersion(null);
+          setVersions([]);
+          setPreviewError(undefined);
+          setCurrentTitle('');
+          setProjectId(undefined);
+          setActiveTab('split');
+          versionCounterRef.current = 0;
+        } else if (saved) {
         if (Array.isArray(saved.messages)) setMessages(saved.messages);
         if (typeof saved.currentCode === 'string') setCurrentCode(saved.currentCode);
         if (typeof saved.currentHtml === 'string') setCurrentHtml(saved.currentHtml);
-        if (saved.outputMode === 'tsx' || saved.outputMode === 'html' || saved.outputMode === 'nextjs') {
+        if (saved.outputMode === 'tsx' || saved.outputMode === 'html') {
           setOutputMode(saved.outputMode);
         }
         if (Array.isArray(saved.componentList)) setComponentList(saved.componentList);
-        if (Array.isArray(saved.previewComponents)) setPreviewComponents(saved.previewComponents);
         if (typeof saved.previewLayout === 'string') setPreviewLayout(saved.previewLayout);
         if (saved.currentMode === 'creative' || saved.currentMode === 'deterministic') setCurrentMode(saved.currentMode);
         if (saved.currentTarget === 'web' || saved.currentTarget === 'expo-rn') setCurrentTarget(saved.currentTarget);
         if (typeof saved.currentVersion === 'number' || saved.currentVersion === null) setCurrentVersion(saved.currentVersion);
         if (typeof saved.currentTitle === 'string') setCurrentTitle(saved.currentTitle);
+        if (typeof saved.projectId === 'string') setProjectId(saved.projectId);
         if (saved.activeTab === 'split' || saved.activeTab === 'code' || saved.activeTab === 'preview') {
           setActiveTab(saved.activeTab);
         }
-      }
+        }
+        if (!isSignedIn) sessionStorage.removeItem(AUTH_SESSION_USER_KEY);
     } catch (error) {
       console.warn('[workspace] Could not restore saved workspace:', error);
       sessionStorage.removeItem(WORKSPACE_STORAGE_KEY);
     } finally {
-      setWorkspaceRestored(true);
+      if (active) setWorkspaceRestored(true);
     }
-  }, []);
+    };
+    void restore();
+    return () => { active = false; };
+  }, [isAuthLoaded, isSignedIn, userId]);
 
   useEffect(() => {
     if (!workspaceRestored) return;
@@ -140,12 +302,12 @@ export default function Home() {
       currentHtml,
       outputMode,
       componentList,
-      previewComponents,
       previewLayout,
       currentMode,
       currentTarget,
       currentVersion,
       currentTitle,
+      projectId,
       activeTab,
     };
 
@@ -161,35 +323,14 @@ export default function Home() {
     currentHtml,
     outputMode,
     componentList,
-    previewComponents,
     previewLayout,
     currentMode,
     currentTarget,
     currentVersion,
     currentTitle,
+    projectId,
     activeTab,
   ]);
-
-  // Write TSX to disk so Next.js can compile it natively
-  const writePreviewFile = useCallback(async (code: string) => {
-    try {
-      const response = await fetch('/api/write-preview', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code }),
-      });
-      const result = await response.json();
-      if (!response.ok || !result.success) {
-        setPreviewError(result.diagnostics || result.error || 'Generated preview failed validation.');
-        return;
-      }
-      setPreviewError(undefined);
-      setPreviewKey(k => k + 1); // triggers LivePreview reload
-    } catch (e) {
-      console.warn('[writePreviewFile] Failed:', e);
-      setPreviewError(e instanceof Error ? e.message : 'Could not validate generated preview.');
-    }
-  }, []);
 
   // Apply generation result (web or expo-rn)
   const applyGenerationResult = useCallback((result: GenerationResult) => {
@@ -203,9 +344,9 @@ export default function Home() {
     setCurrentTarget(target);
     setCurrentCode(primaryCode);
     setComponentList(result.generation.componentList || []);
-    setPreviewComponents(result.plan.blocks ? result.plan.blocks.flatMap(b => b.components) : []);
     setPreviewLayout(result.plan.layout);
     setCurrentVersion(result.version);
+    setProjectId(result.projectId);
     setPreviewError(undefined);
     setCurrentTitle(result.userPrompt);
     setDownloadPayload(undefined);
@@ -221,8 +362,7 @@ export default function Home() {
       });
     } else {
       setCurrentHtml('');
-      setOutputMode('nextjs'); // use Next.js native compilation
-      writePreviewFile(primaryCode);
+      setOutputMode('tsx');
     }
 
     if (result.version > versionCounterRef.current) {
@@ -234,44 +374,145 @@ export default function Home() {
       return [...prev, {
         version: result.version,
         code: primaryCode,
+        sourceType: target === 'expo-rn' ? 'expo' : 'tsx',
+        previewHtml: previewArtifact?.kind === 'html' ? previewArtifact.content : undefined,
         prompt: result.userPrompt,
         plan: result.plan,
         explanation: result.explanation,
         timestamp: result.timestamp,
       }];
     });
-  }, [writePreviewFile]);
+  }, []);
 
   // Apply full HTML app result
-  const applyHtmlResult = useCallback((html: string, title: string, metadata?: { mode?: GenerationMode; target?: GenerationTarget }) => {
-    versionCounterRef.current += 1;
+  const applyHtmlResult = useCallback((html: string, title: string, metadata?: { mode?: GenerationMode; target?: GenerationTarget }, persisted?: { projectId?: string; version?: number; prompt?: string }) => {
+    const nextVersion = persisted?.version ?? versionCounterRef.current + 1;
+    versionCounterRef.current = Math.max(versionCounterRef.current, nextVersion);
     setCurrentHtml(html);
     setCurrentCode('');
     setOutputMode('html');
-    setPreviewComponents([]);
     setCurrentMode(metadata?.mode || 'creative');
     setCurrentTarget(metadata?.target || 'web');
     setDownloadPayload(undefined);
-    setCurrentVersion(versionCounterRef.current);
+    setCurrentVersion(nextVersion);
+    setProjectId(persisted?.projectId);
     setPreviewError(undefined);
     setCurrentTitle(title);
+    setVersions((previous) => {
+      if (previous.some((entry) => entry.version === nextVersion)) return previous;
+      return [...previous, {
+        version: nextVersion,
+        code: html,
+        sourceType: 'html',
+        prompt: persisted?.prompt || title,
+        plan: { layout: 'single-column', reasoning: 'Standalone HTML application.' },
+        explanation: { explanation: 'Standalone HTML application.', componentChoices: [], layoutReason: '' },
+        timestamp: new Date().toISOString(),
+      }];
+    });
   }, []);
 
-  // Load template (instant — no API)
-  const handleLoadTemplate = useCallback((template: Template) => {
-    versionCounterRef.current += 1;
-    const nextVersion = versionCounterRef.current;
-    const result = { ...template.result, version: nextVersion, timestamp: new Date().toISOString() };
-    applyGenerationResult(result);
+  const openProjectLibrary = useCallback(async () => {
+    if (!isAuthLoaded || !isSignedIn) return;
+    setIsProjectLibraryOpen(true);
+    setIsProjectsLoading(true);
+    try {
+      const response = await fetch('/api/projects');
+      const payload = await response.json();
+      if (!response.ok || !payload.success) throw new Error(payload.error || 'Could not load projects.');
+      setProjects(payload.data as ProjectSummary[]);
+    } catch (error) {
+      setPreviewError(error instanceof Error ? error.message : 'Could not load projects.');
+    } finally {
+      setIsProjectsLoading(false);
+    }
+  }, [isAuthLoaded, isSignedIn]);
 
-    const userMsg: ChatMessage = { id: `user-tpl-${Date.now()}`, role: 'user', content: `📐 Template: ${template.name}`, timestamp: new Date().toISOString() };
-    const assistantMsg: ChatMessage = { id: `assistant-tpl-${Date.now()}`, role: 'assistant', content: result.explanation.explanation, timestamp: new Date().toISOString(), generationResult: result };
-    setMessages(prev => [...prev, userMsg, assistantMsg]);
-    setActiveTab('preview');
-  }, [applyGenerationResult]);
+  const loadProject = useCallback(async (nextProjectId: string) => {
+    setIsProjectsLoading(true);
+    try {
+      const response = await fetch(`/api/projects/${nextProjectId}`);
+      const payload = await response.json();
+      if (!response.ok || !payload.success) throw new Error(payload.error || 'Could not load this project.');
+
+      const detail = payload.data as StoredProjectDetail;
+      const current = detail.version;
+      if (!current) throw new Error('This project has no saved version yet.');
+      const metadata = asStoredMetadata(current.metadata);
+      const restoredVersions = detail.versions.map(toVersionEntry);
+      const sourceType = current.sourceType;
+      const previewHtml = metadata.previewArtifact?.kind === 'html' ? metadata.previewArtifact.content : undefined;
+
+      setProjectId(detail.project.id);
+      setCurrentTitle(detail.project.title);
+      setCurrentVersion(current.versionNumber);
+      versionCounterRef.current = current.versionNumber;
+      setVersions(restoredVersions);
+      setMessages(detail.messages.map((message) => ({
+        id: message.id,
+        role: message.role,
+        content: message.content,
+        timestamp: message.timestamp,
+      })));
+      setComponentList(Array.isArray(metadata.componentList) ? metadata.componentList.filter((item): item is string => typeof item === 'string') : []);
+      setPreviewLayout(metadata.plan?.layout || 'single-column');
+      setCurrentMode(metadata.mode === 'deterministic' ? 'deterministic' : 'creative');
+      setCurrentTarget(metadata.target === 'expo-rn' ? 'expo-rn' : 'web');
+      setPreviewError(undefined);
+      setDownloadPayload(undefined);
+
+      if (sourceType === 'html') {
+        setCurrentCode('');
+        setCurrentHtml(current.source);
+        setOutputMode('html');
+      } else if (sourceType === 'expo' && previewHtml) {
+        setCurrentCode(current.source);
+        setCurrentHtml(previewHtml);
+        setOutputMode('html');
+        setDownloadPayload({
+          filename: `${toKebabCase(detail.project.title)}-expo-bundle.txt`,
+          content: current.source,
+          mimeType: 'text/plain',
+          label: '↓ Download Code',
+        });
+      } else {
+        setCurrentCode(current.source);
+        setCurrentHtml('');
+        setOutputMode('tsx');
+      }
+
+      setActiveTab('preview');
+      setIsProjectLibraryOpen(false);
+    } catch (error) {
+      setPreviewError(error instanceof Error ? error.message : 'Could not load this project.');
+    } finally {
+      setIsProjectsLoading(false);
+    }
+  }, []);
+
+  const handleShare = useCallback(async () => {
+    if (!projectId) return;
+    setShareStatus('Creating secure link…');
+    try {
+      const response = await fetch(`/api/projects/${projectId}/share`, { method: 'POST' });
+      const payload = await response.json();
+      if (!response.ok || !payload.success || typeof payload.data?.shareToken !== 'string') {
+        throw new Error(payload.error || 'Could not create a share link.');
+      }
+      const shareUrl = `${window.location.origin}/share/${payload.data.shareToken}`;
+      await navigator.clipboard?.writeText(shareUrl);
+      setShareStatus('Share link copied');
+    } catch (error) {
+      setShareStatus(error instanceof Error ? error.message : 'Could not create a share link.');
+    }
+  }, [projectId]);
 
   // ── MAIN SEND HANDLER ──
   const handleSendMessage = useCallback(async (message: string) => {
+    if (!isAuthLoaded || !isSignedIn) {
+      setMessages(prev => [...prev, { id: `auth-${Date.now()}`, role: 'assistant', content: 'Error: Sign in to generate, save versions, and share your projects.', timestamp: new Date().toISOString() }]);
+      return;
+    }
     const userMsg: ChatMessage = { id: `user-${Date.now()}`, role: 'user', content: message, timestamp: new Date().toISOString() };
     setMessages(prev => [...prev, userMsg]);
     setIsLoading(true);
@@ -286,11 +527,11 @@ export default function Home() {
         const response = await fetch('/api/generate-app', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: message, generationMode: 'creative', targetPreference: 'web' }),
+          body: JSON.stringify({ prompt: message, projectId, currentTitle, generationMode: 'creative', targetPreference: 'web' }),
         });
         const data = await response.json();
         if (data.success && data.data?.html) {
-          applyHtmlResult(data.data.html, data.data.title || message, data.data.metadata);
+          applyHtmlResult(data.data.html, data.data.title || message, data.data.metadata, data.data);
           const assistantMsg: ChatMessage = {
             id: `assistant-${Date.now()}`, role: 'assistant',
             content: `✅ Built your **${data.data.title || message}** — a fully working app! You can interact with it in the Preview panel. Click **↓ Download** to save the HTML file.`,
@@ -308,6 +549,7 @@ export default function Home() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             prompt: message,
+            projectId,
             currentCode: currentCode || '// empty',
             conversationContext,
             currentTitle,
@@ -335,6 +577,7 @@ export default function Home() {
           body: JSON.stringify({
             prompt: message,
             currentHtml,
+            projectId,
             conversationContext,
             currentTitle,
             generationMode: currentMode,
@@ -343,7 +586,7 @@ export default function Home() {
         });
         const data = await response.json();
         if (data.success && data.data?.html) {
-          applyHtmlResult(data.data.html, data.data.title || message, data.data.metadata);
+          applyHtmlResult(data.data.html, data.data.title || message, data.data.metadata, data.data);
           const assistantMsg: ChatMessage = {
             id: `assistant-${Date.now()}`,
             role: 'assistant',
@@ -363,6 +606,9 @@ export default function Home() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             prompt: message,
+            currentVersion: currentVersion || 0,
+            currentTitle,
+            projectId,
             generationMode: 'creative',
             targetPreference: 'auto',
           }),
@@ -413,7 +659,7 @@ export default function Home() {
                 } else if (event.type === 'complete') {
                   const result = event.data as GenerationResult;
                   applyGenerationResult(result);
-                  const assistantMsg: ChatMessage = { id: `assistant-${Date.now()}`, role: 'assistant', content: result.explanation.explanation, timestamp: new Date().toISOString(), generationResult: result };
+                  const assistantMsg: ChatMessage = { id: `assistant-${Date.now()}`, role: 'assistant', content: `${result.explanation.explanation}${result.persistenceWarning ? `\n\n⚠️ ${result.persistenceWarning}` : ''}`, timestamp: new Date().toISOString(), generationResult: result };
                   setMessages(prev => [...prev, assistantMsg]);
                   setActiveAgents([]);
                   setActiveTab('preview');
@@ -444,25 +690,65 @@ export default function Home() {
     currentTarget,
     messages,
     currentTitle,
+    projectId,
+    isAuthLoaded,
+    isSignedIn,
   ]);
 
   const handleRollback = useCallback(async (targetVersion: number) => {
-    const version = versions.find(v => v.version === targetVersion);
-    if (!version) return;
-    setCurrentCode(version.code);
-    setCurrentHtml('');
-    setOutputMode('nextjs');
-    setPreviewComponents(version.plan.blocks ? version.plan.blocks.flatMap(b => b.components) : []);
-    setPreviewLayout(version.plan.layout);
-    setCurrentMode('creative');
-    setCurrentTarget('web');
-    setDownloadPayload(undefined);
-    setCurrentVersion(version.version);
-    setPreviewError(undefined);
-    setShowVersionHistory(false);
-    writePreviewFile(version.code);
-    setMessages(prev => [...prev, { id: `system-${Date.now()}`, role: 'assistant', content: `Rolled back to version ${targetVersion}. Original prompt: "${version.prompt}"`, timestamp: new Date().toISOString() }]);
-  }, [versions, writePreviewFile]);
+    const version = versions.find((entry) => entry.version === targetVersion);
+    if (!version || !projectId) return;
+    setIsLoading(true);
+    try {
+      const response = await fetch(`/api/projects/${projectId}/rollback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetVersion }),
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload.success) throw new Error(payload.error || 'Could not restore that version.');
+
+      const savedVersion = payload.data.version as StoredProjectVersion;
+      const savedEntry = toVersionEntry(savedVersion);
+      versionCounterRef.current = savedEntry.version;
+      setVersions((previous) => [...previous, savedEntry]);
+      setCurrentVersion(savedEntry.version);
+      setPreviewLayout(version.plan.layout);
+      setPreviewError(undefined);
+      setShowVersionHistory(false);
+      setMessages((previous) => [...previous, {
+        id: `system-${Date.now()}`,
+        role: 'assistant',
+        content: `Restored version ${targetVersion} as v${savedEntry.version}.`,
+        timestamp: new Date().toISOString(),
+      }]);
+
+      if (savedEntry.sourceType === 'html') {
+        setCurrentCode('');
+        setCurrentHtml(savedEntry.code);
+        setOutputMode('html');
+      } else if (savedEntry.sourceType === 'expo' && savedEntry.previewHtml) {
+        setCurrentCode(savedEntry.code);
+        setCurrentHtml(savedEntry.previewHtml);
+        setOutputMode('html');
+        setDownloadPayload({
+          filename: `${toKebabCase(currentTitle)}-expo-bundle.txt`,
+          content: savedEntry.code,
+          mimeType: 'text/plain',
+          label: '↓ Download Code',
+        });
+      } else {
+        setCurrentCode(savedEntry.code);
+        setCurrentHtml('');
+        setOutputMode('tsx');
+        setDownloadPayload(undefined);
+      }
+    } catch (error) {
+      setPreviewError(error instanceof Error ? error.message : 'Could not restore that version.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentTitle, projectId, versions]);
 
   const handleRegenerate = useCallback(async () => {
     const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
@@ -480,7 +766,6 @@ export default function Home() {
     setCurrentHtml('');
     setOutputMode('tsx');
     setComponentList([]);
-    setPreviewComponents([]);
     setPreviewLayout('single-column');
     setCurrentMode('creative');
     setCurrentTarget('web');
@@ -489,30 +774,17 @@ export default function Home() {
     setVersions([]);
     setPreviewError(undefined);
     setCurrentTitle('');
+    setProjectId(undefined);
+    setShareStatus(undefined);
   }, []);
 
   const hasOutput = !!(currentCode || currentHtml);
-  const isWorkspaceEmpty = messages.length === 0 && !hasOutput && !isLoading;
-
-  useEffect(() => {
-    if (!isWorkspaceEmpty && !hasEnteredWorkspaceRef.current) {
-      hasEnteredWorkspaceRef.current = true;
-      setWorkspaceEntering(true);
-      const timer = setTimeout(() => setWorkspaceEntering(false), 420);
-      return () => clearTimeout(timer);
-    }
-  }, [isWorkspaceEmpty]);
-
   if (!workspaceRestored) {
     return <div role="status" aria-label="Restoring workspace" style={{ minHeight: '100vh', background: '#fffdf9' }} />;
   }
 
-  if (isWorkspaceEmpty) {
-    return <LandingPage onSendMessage={handleSendMessage} isLoading={isLoading} />;
-  }
-
   return (
-    <div className={`${styles.appContainer} ${workspaceEntering ? styles.workspaceEntering : ''}`}>
+    <div className={styles.appContainer}>
       {/* Top Bar */}
       <div className={styles.topBar}>
         <div className={styles.topBarBrand}>
@@ -546,6 +818,14 @@ export default function Home() {
               ))}
             </select>
           )}
+          <button className={styles.topBarButton} onClick={openProjectLibrary} disabled={!isAuthLoaded || !isSignedIn || isProjectsLoading} id="projects-button">
+            <FolderOpen size={13} /> Projects
+          </button>
+          {projectId && (
+            <button className={styles.topBarButton} onClick={handleShare} disabled={isLoading} id="share-button" title="Create a private, unlisted share link">
+              <Link2 size={13} /> {shareStatus || 'Share'}
+            </button>
+          )}
           {hasOutput && (
             <button className={styles.topBarButton} onClick={handleRegenerate} disabled={isLoading} id="regenerate-button">
               <RotateCcw size={13} /> Regenerate
@@ -554,6 +834,7 @@ export default function Home() {
           <button className={`${styles.topBarButton} ${styles.topBarButtonDanger}`} onClick={handleClear} id="clear-button">
             <Trash2 size={13} /> Clear
           </button>
+          <AuthControls />
         </div>
       </div>
 
@@ -564,7 +845,6 @@ export default function Home() {
           <ChatPanel
             messages={messages}
             onSendMessage={handleSendMessage}
-            onLoadTemplate={handleLoadTemplate}
             isLoading={isLoading}
             hasCode={hasOutput}
             activeAgents={activeAgents}
@@ -595,9 +875,6 @@ export default function Home() {
                 </div>
                 <div className={styles.splitRight}>
                   <PreviewPanel
-                    key={previewKey}
-                    components={previewComponents}
-                    layout={previewLayout}
                     version={currentVersion}
                     error={previewError}
                     code={currentCode || undefined}
@@ -614,9 +891,6 @@ export default function Home() {
             )}
             {activeTab === 'preview' && (
               <PreviewPanel
-                key={previewKey}
-                components={previewComponents}
-                layout={previewLayout}
                 version={currentVersion}
                 error={previewError}
                 code={currentCode || undefined}
@@ -638,6 +912,47 @@ export default function Home() {
         currentVersion={currentVersion}
         onRollback={handleRollback}
       />
+
+      {isProjectLibraryOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Saved projects"
+          onClick={() => setIsProjectLibraryOpen(false)}
+          style={{ position: 'fixed', inset: 0, zIndex: 80, display: 'grid', placeItems: 'center', padding: 20, background: 'rgba(21,18,15,0.38)', backdropFilter: 'blur(5px)' }}
+        >
+          <div onClick={(event) => event.stopPropagation()} style={{ width: 'min(560px, 100%)', maxHeight: 'min(620px, 80vh)', overflow: 'auto', borderRadius: 20, border: '1px solid rgba(21,18,15,0.14)', background: '#fffdf9', boxShadow: '0 28px 90px rgba(21,18,15,0.28)', padding: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
+              <div>
+                <h2 style={{ margin: 0, color: '#15120f', fontSize: '1.1rem', letterSpacing: '-0.03em' }}>Saved projects</h2>
+                <p style={{ margin: '4px 0 0', color: '#766f66', fontSize: '0.78rem' }}>Each generation, follow-up, and restore is kept as a version.</p>
+              </div>
+              <button className={styles.topBarButton} onClick={() => setIsProjectLibraryOpen(false)} aria-label="Close saved projects"><X size={15} /></button>
+            </div>
+            {isProjectsLoading ? (
+              <p style={{ color: '#766f66', fontSize: '0.85rem', padding: '24px 0', textAlign: 'center' }}>Loading saved projects…</p>
+            ) : projects.length === 0 ? (
+              <p style={{ color: '#766f66', fontSize: '0.85rem', padding: '24px 0', textAlign: 'center' }}>No projects yet. Your next generation will be saved here.</p>
+            ) : (
+              <div style={{ display: 'grid', gap: 8 }}>
+                {projects.map((project) => (
+                  <button
+                    key={project.id}
+                    onClick={() => loadProject(project.id)}
+                    style={{ width: '100%', display: 'flex', justifyContent: 'space-between', gap: 16, textAlign: 'left', border: '1px solid rgba(21,18,15,0.11)', borderRadius: 12, background: '#fff', color: '#15120f', padding: '13px 14px', cursor: 'pointer', font: 'inherit' }}
+                  >
+                    <span style={{ minWidth: 0 }}>
+                      <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 700, fontSize: '0.88rem' }}>{project.title}</span>
+                      <span style={{ display: 'block', marginTop: 3, color: '#766f66', fontSize: '0.72rem' }}>Updated {new Date(project.updatedAt).toLocaleDateString()}</span>
+                    </span>
+                    <span style={{ flexShrink: 0, color: '#da4f2f', fontSize: '0.75rem', fontWeight: 700 }}>v{project.currentVersion}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

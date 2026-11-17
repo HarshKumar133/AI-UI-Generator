@@ -40,11 +40,25 @@ function isRateLimitError(error: unknown): boolean {
     );
 }
 
+function isTransientProviderError(error: unknown): boolean {
+    if (typeof error !== 'object' || error === null) return false;
+    const maybeError = error as { status?: number; message?: string };
+    const status = maybeError.status;
+    const message = maybeError.message?.toLowerCase() || '';
+    return status === 429 || status === 500 || status === 502 || status === 503 || status === 504
+        || /\b(429|500|502|503|504)\b|high demand|temporar(?:y|ily)|overload|unavailable/.test(message);
+}
+
+function waitForRetry(attempt: number): Promise<void> {
+    const delay = Math.min(2_000, 400 * 2 ** attempt);
+    return new Promise((resolve) => setTimeout(resolve, delay));
+}
+
 export async function callGemini(prompt: string, systemInstruction?: string): Promise<string> {
     getGeminiClient(); // Ensure clients are initialized
 
     let attempts = 0;
-    const maxAttempts = clients.length;
+    const maxAttempts = Math.max(3, clients.length * 2);
 
     while (attempts < maxAttempts) {
         const client = getGeminiClient();
@@ -70,6 +84,14 @@ export async function callGemini(prompt: string, systemInstruction?: string): Pr
                 if (attempts >= maxAttempts) {
                     throw new Error('All available API keys have reached their quota limits. Please top up or add new keys to continue.');
                 }
+                await waitForRetry(attempts - 1);
+                continue;
+            }
+
+            if (isTransientProviderError(error) && attempts < maxAttempts - 1) {
+                console.warn(`[Gemini API] Temporary provider error; retrying (${attempts + 1}/${maxAttempts})...`);
+                await waitForRetry(attempts);
+                attempts++;
                 continue;
             }
 

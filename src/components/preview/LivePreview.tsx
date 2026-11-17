@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 
 interface LivePreviewProps {
   code: string;
-  outputMode?: 'tsx' | 'html' | 'nextjs'; // 'nextjs' = /preview route via Next.js native compilation
+  outputMode?: 'tsx' | 'html';
   title?: string;
   downloadPayload?: {
     filename: string;
@@ -351,10 +351,28 @@ function buildIframeHTML(code: string): string {
     .replace(/'use client';\s*/g, '')
     .replace(/"use client";\s*/g, '')
     .replace(/import React.*?from ['"]react['"];?\s*/g, '')
+    .replace(/import\s+type\s+[^;]+;?\s*/g, '')
     .replace(/import\s+\{[^}]+\}\s+from\s+['"]@\/components\/ui['"];?\s*/g, '')
     .replace(/import\s+\{[^}]+\}\s+from\s+['"]@\/components\/ui\/[^'"]+['"];?\s*/g, '')
     .replace(/import\s+.*?from\s+['"]@\/[^'"]+['"];?\s*/g, '')
-    .replace(/import\s+.*?from\s+['"](?!react)[^.@][^'"]*['"];?\s*/g, '');
+    .replace(/import\s+.*?from\s+['"](?!react)[^.@][^'"]*['"];?\s*/g, '')
+    // Babel runs this in a classic script, not an ES module. The generator
+    // correctly emits a default export for Next.js, so remove only the module
+    // wrapper while preserving the GeneratedUI declaration for rendering.
+    .replace(/^\s*export\s+default\s+function\s+GeneratedUI\b/m, 'function GeneratedUI')
+    .replace(/^\s*export\s+default\s+GeneratedUI\s*;?\s*$/m, '')
+    .replace(/^\s*export\s+(?=(?:const|let|function|class|type|interface)\b)/gm, '');
+  const previewProgram = `
+const {
+  useState, useEffect, useCallback, useRef, useMemo,
+  useReducer, useContext, useLayoutEffect, useId,
+  createContext, forwardRef, memo, Fragment,
+} = React;
+${COMPONENT_REGISTRY_JS}
+${transformedCode}
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(React.createElement(GeneratedUI));`;
+  const serializedProgram = JSON.stringify(previewProgram).replace(/</g, '\u003c');
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -365,23 +383,29 @@ function buildIframeHTML(code: string): string {
 </head>
 <body>
 <div id="root"></div>
-<script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <script>
-// Expose all React hooks + APIs as globals (generated code uses them without React. prefix)
-const {
-  useState, useEffect, useCallback, useRef, useMemo,
-  useReducer, useContext, useLayoutEffect, useId,
-  createContext, forwardRef, memo, Fragment,
-} = React;
-${COMPONENT_REGISTRY_JS}
+let previewReported = false;
+const reportPreviewError = (error) => {
+  if (previewReported) return;
+  previewReported = true;
+  const message = error?.message || error?.reason?.message || 'The generated preview could not be evaluated.';
+  window.parent.postMessage({ type: 'PREVIEW_ERROR', message }, '*');
+};
+window.addEventListener('error', reportPreviewError);
+window.addEventListener('unhandledrejection', reportPreviewError);
 </script>
-<script type="text/babel" data-presets="react,typescript">
-${transformedCode}
-
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(React.createElement(GeneratedUI));
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous" onerror="reportPreviewError(new Error('React failed to load. Check your connection and retry.'))"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous" onerror="reportPreviewError(new Error('ReactDOM failed to load. Check your connection and retry.'))"></script>
+<script src="https://unpkg.com/@babel/standalone@7.26.10/babel.min.js" crossorigin="anonymous" onerror="reportPreviewError(new Error('The preview compiler failed to load. Check your connection and retry.'))"></script>
+<script>
+try {
+  if (!window.React || !window.ReactDOM || !window.Babel) throw new Error('The preview runtime did not finish loading.');
+  const source = ${serializedProgram};
+  const compiled = window.Babel.transform(source, { presets: ['react', 'typescript'] }).code;
+  Function(compiled)();
+} catch (error) {
+  reportPreviewError(error);
+}
 </script>
 </body>
 </html>`;
@@ -389,10 +413,23 @@ root.render(React.createElement(GeneratedUI));
 
 /** Build direct HTML iframe (full-app mode — no Babel needed) */
 function buildDirectHTML(html: string): string {
-  if (!html.includes('<body')) {
-    return `<!DOCTYPE html><html><head><style>body{background:#fffdf9;color:#15120f;font-family:system-ui,sans-serif;margin:0}*{box-sizing:border-box}</style></head><body>${html}</body></html>`;
+  const document = html.includes('<body')
+    ? html
+    : `<!DOCTYPE html><html><head><style>body{background:#fffdf9;color:#15120f;font-family:system-ui,sans-serif;margin:0}*{box-sizing:border-box}</style></head><body>${html}</body></html>`;
+  const reporter = `<script>const reportPreviewError=(error)=>{const message=error?.message||error?.reason?.message||String(error||'Unknown preview error');window.parent.postMessage({type:'PREVIEW_ERROR',message},'*')};window.addEventListener('error',reportPreviewError);window.addEventListener('unhandledrejection',reportPreviewError);</script>`;
+  return document.replace(/<\/head>/i, `${reporter}</head>`);
+}
+
+function findUnsupportedImports(code: string): string[] {
+  const importPattern = /^\s*import[\s\S]*?from\s+['"]([^'"]+)['"];?/gm;
+  const unsupported = new Set<string>();
+  for (const match of code.matchAll(importPattern)) {
+    const source = match[1];
+    if (source && source !== 'react' && source !== '@/components/ui' && !source.startsWith('@/components/ui/')) {
+      unsupported.add(source);
+    }
   }
-  return html;
+  return [...unsupported];
 }
 
 // ── LivePreview Component ──
@@ -402,26 +439,16 @@ const LivePreview: React.FC<LivePreviewProps> = ({ code, outputMode = 'tsx', tit
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // ── NEXTJS MODE: simple iframe pointing at /preview ──
-  // The file has already been written by page.tsx before this renders.
-  // We send a postMessage to trigger a remount inside the /preview page.
-  useEffect(() => {
-    if (outputMode === 'nextjs') {
-      // Give Turbopack a moment to detect the file change, then signal reload
-      const timer = setTimeout(() => {
-        iframeRef.current?.contentWindow?.postMessage({ type: 'RELOAD_PREVIEW' }, '*');
-      }, 800);
-      return () => clearTimeout(timer);
-    }
-  }, [code, outputMode]);
-
   const render = useCallback(() => {
-    if (outputMode === 'nextjs') {
-      return;
-    }
-
     const iframe = iframeRef.current;
     if (!iframe || !code) return;
+
+    const unsupportedImports = outputMode === 'tsx' ? findUnsupportedImports(code) : [];
+    if (unsupportedImports.length > 0) {
+      setLoading(false);
+      setError(`This preview cannot load unsupported imports: ${unsupportedImports.join(', ')}. Regenerate it to use React and the built-in UI kit only.`);
+      return;
+    }
 
     setError(null);
     setLoading(true);
@@ -431,7 +458,7 @@ const LivePreview: React.FC<LivePreviewProps> = ({ code, outputMode = 'tsx', tit
     const url = URL.createObjectURL(blob);
 
     const handleMessage = (e: MessageEvent) => {
-      if (e.data?.type === 'PREVIEW_ERROR') {
+      if (e.source === iframe.contentWindow && e.data?.type === 'PREVIEW_ERROR') {
         setError(e.data.message);
         setLoading(false);
       }
@@ -440,15 +467,6 @@ const LivePreview: React.FC<LivePreviewProps> = ({ code, outputMode = 'tsx', tit
 
     iframe.onload = () => {
       setLoading(false);
-      try {
-        if (iframe.contentWindow) {
-          iframe.contentWindow.onerror = (msg, _src, _line, _col, err) => {
-            const message = err?.message || String(msg);
-            window.parent.postMessage({ type: 'PREVIEW_ERROR', message }, '*');
-            return true;
-          };
-        }
-      } catch { /* blob URLs are same-origin */ }
       URL.revokeObjectURL(url);
     };
 
@@ -457,9 +475,6 @@ const LivePreview: React.FC<LivePreviewProps> = ({ code, outputMode = 'tsx', tit
   }, [code, outputMode]);
 
   useEffect(() => {
-    if (outputMode === 'nextjs') {
-      return;
-    }
     let cleanup: void | (() => void);
     const timer = window.setTimeout(() => {
       cleanup = render();
@@ -471,13 +486,7 @@ const LivePreview: React.FC<LivePreviewProps> = ({ code, outputMode = 'tsx', tit
         cleanup();
       }
     };
-  }, [render, outputMode]);
-
-  const handleOpenTab = useCallback(() => {
-    const html = outputMode === 'html' ? buildDirectHTML(code) : buildIframeHTML(code);
-    const blob = new Blob([html], { type: 'text/html' });
-    window.open(URL.createObjectURL(blob), '_blank');
-  }, [code, outputMode]);
+  }, [render]);
 
   const handleDownload = useCallback(() => {
     const payloadContent = downloadPayload?.content || (outputMode === 'html' ? buildDirectHTML(code) : buildIframeHTML(code));
@@ -491,29 +500,6 @@ const LivePreview: React.FC<LivePreviewProps> = ({ code, outputMode = 'tsx', tit
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }, [code, outputMode, title, downloadPayload]);
 
-  if (outputMode === 'nextjs') {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', minHeight: 300 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', borderBottom: '1px solid rgba(21,18,15,0.09)', flexShrink: 0, background: 'rgba(250,240,231,0.72)' }}>
-          <span style={{ fontSize: '0.62rem', color: '#da4f2f', background: 'rgba(218,79,47,0.1)', border: '1px solid rgba(218,79,47,0.2)', borderRadius: 5, padding: '2px 7px', fontWeight: 700, letterSpacing: '0.06em' }}>⚙ NEXT.JS</span>
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
-            <button onClick={() => window.open('/preview', '_blank')} style={{ padding: '3px 10px', borderRadius: 6, border: '1px solid rgba(21,18,15,0.1)', background: 'rgba(21,18,15,0.08)', color: '#766f66', cursor: 'pointer', fontSize: '0.7rem', fontFamily: 'inherit' }}>
-              ↗ Open
-            </button>
-          </div>
-        </div>
-        <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
-          <iframe
-            ref={iframeRef}
-            src="/preview"
-            title="Next.js Live Preview"
-            style={{ width: '100%', height: '100%', border: 'none', display: 'block', minHeight: 300 }}
-          />
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', minHeight: 300 }}>
       {/* Toolbar */}
@@ -522,9 +508,6 @@ const LivePreview: React.FC<LivePreviewProps> = ({ code, outputMode = 'tsx', tit
           <span style={{ fontSize: '0.62rem', color: '#da4f2f', background: 'rgba(218,79,47,0.1)', border: '1px solid rgba(218,79,47,0.2)', borderRadius: 5, padding: '2px 7px', fontWeight: 700, letterSpacing: '0.06em', marginRight: 'auto' }}>⚡ FULL APP</span>
         )}
         <div style={{ marginLeft: outputMode !== 'html' ? 'auto' : 0, display: 'flex', gap: 6 }}>
-          <button onClick={handleOpenTab} style={{ padding: '3px 10px', borderRadius: 6, border: '1px solid rgba(21,18,15,0.1)', background: 'rgba(21,18,15,0.08)', color: '#766f66', cursor: 'pointer', fontSize: '0.7rem', fontFamily: 'inherit' }} title="Open in new tab">
-            ↗ Open
-          </button>
           {(outputMode === 'html' || !!downloadPayload) && (
             <button onClick={handleDownload} style={{ padding: '3px 10px', borderRadius: 6, border: '1px solid rgba(218,79,47,0.25)', background: 'rgba(218,79,47,0.08)', color: '#da4f2f', cursor: 'pointer', fontSize: '0.7rem', fontFamily: 'inherit' }} title={downloadPayload?.label || 'Download'}>
               {downloadPayload?.label || '↓ Download'}
@@ -555,7 +538,7 @@ const LivePreview: React.FC<LivePreviewProps> = ({ code, outputMode = 'tsx', tit
         <iframe
           ref={iframeRef}
           title="Live Preview"
-          sandbox="allow-scripts allow-same-origin allow-forms"
+          sandbox="allow-scripts allow-forms"
           style={{ width: '100%', height: '100%', border: 'none', display: 'block', minHeight: 300, opacity: loading || error ? 0 : 1, transition: 'opacity 300ms ease' }}
         />
       </div>

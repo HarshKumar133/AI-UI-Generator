@@ -2,21 +2,16 @@
 
 import React from 'react';
 import styles from '@/styles/components/previewPanel.module.css';
-import { ComponentNode } from '@/types';
-import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { ComponentRenderer } from './ComponentRenderer';
 import LivePreview from './LivePreview';
 import { Eye, AlertTriangle, Wand2, KeyRound } from 'lucide-react';
 
 interface PreviewPanelProps {
-    components: ComponentNode[];
-    layout: string;
     version: number | null;
     error?: string;
     code?: string;
     htmlOutput?: string;
     title?: string;
-    outputMode?: 'tsx' | 'html' | 'nextjs';
+    outputMode?: 'tsx' | 'html';
     downloadPayload?: {
         filename: string;
         content: string;
@@ -26,12 +21,12 @@ interface PreviewPanelProps {
 }
 
 export const PreviewPanel: React.FC<PreviewPanelProps> = ({
-    components, layout, version, error, code, htmlOutput, title, outputMode: externalMode, downloadPayload,
+    version, error, code, htmlOutput, title, outputMode: externalMode, downloadPayload,
 }) => {
-    const hasContent = (components && components.length > 0) || !!code || !!htmlOutput;
-    const liveCode = htmlOutput || code;
+    const hasContent = !!code || !!htmlOutput;
+    const liveCode = htmlOutput || code || '';
     // Use external outputMode if provided, otherwise auto-detect from content
-    const outputMode: 'html' | 'tsx' | 'nextjs' = externalMode || (htmlOutput ? 'html' : 'tsx');
+    const outputMode: 'html' | 'tsx' = externalMode || (htmlOutput ? 'html' : 'tsx');
     const isQuotaError = !!error && /(quota|api key)/i.test(error);
 
 
@@ -58,12 +53,12 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({
                             {isQuotaError ? (
                                 <>
                                     <li>Add a fresh API key in your local env and restart dev server.</li>
-                                    <li>Use Templates from chat to keep iterating without generation calls.</li>
+                                    <li>Retry your prompt after the server is ready.</li>
                                 </>
                             ) : (
                                 <>
                                     <li>Retry with a tighter prompt and fewer requirements.</li>
-                                    <li>Switch to a template, then modify from there.</li>
+                                    <li>Describe the intended result in a single focused request.</li>
                                 </>
                             )}
                         </ul>
@@ -116,9 +111,9 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({
                         Your generated UI will be rendered here in real-time.
                     </div>
                     <div className={styles.emptySteps}>
-                        <div className={styles.emptyStep}>1. Describe the dashboard in chat.</div>
-                        <div className={styles.emptyStep}>2. Generate or load a template.</div>
-                        <div className={styles.emptyStep}>3. Preview updates appear instantly.</div>
+                        <div className={styles.emptyStep}>1. Describe the interface in chat.</div>
+                        <div className={styles.emptyStep}>2. Review the generated code and preview.</div>
+                        <div className={styles.emptyStep}>3. Refine it in a follow-up message.</div>
                     </div>
                 </div>
             </div>
@@ -142,13 +137,7 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({
 
             <div className={styles.previewContainer}>
                 <div className={styles.previewContent}>
-                    {liveCode ? (
-                        <LivePreview code={liveCode} outputMode={outputMode} title={title} downloadPayload={downloadPayload} />
-                    ) : (
-                        <ErrorBoundary>
-                            <ComponentRenderer nodes={components} layout={layout} />
-                        </ErrorBoundary>
-                    )}
+                    <LivePreview code={liveCode} outputMode={outputMode} title={title} downloadPayload={downloadPayload} />
                 </div>
             </div>
         </div>

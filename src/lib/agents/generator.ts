@@ -212,8 +212,8 @@ Rules:
 - Output ONLY TSX code (no markdown, no fences).
 - First line: 'use client';
 - Default export must be function GeneratedUI.
-- You may use any appropriate UI/UX libraries (animation, charts, forms, data viz, etc), but prefer React-native implementation patterns that run without extra package installation for baseline preview compatibility.
-- Keep imports explicit and valid when used.
+- Import only from React and the @/components/ui module; no third-party packages, local aliases, CDN scripts, or icon libraries.
+- The preview runs in a sandbox with React and the built-in UI kit. Use inline SVG or text glyphs when an icon is useful.
 - Prefer composable patterns and modern responsive layout.
 - Include thoughtful motion/interaction states (hover, loading, transitions).
 - Prioritize accessibility and keyboard/semantic correctness.
@@ -572,7 +572,7 @@ Implementation plan:
 ${(plan.implementationPlan || []).map((line, i) => `${i + 1}. ${line}`).join('\n') || '- build production-ready UI'}
 
 Preview compatibility requirement:
-- Prefer implementation that runs with React + local code without requiring package installs.
+- Use only React and @/components/ui imports. The preview rejects every other package import.
 
 Output only TSX code for GeneratedUI.`;
 

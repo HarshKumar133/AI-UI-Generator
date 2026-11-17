@@ -73,10 +73,10 @@ export function validateGeneratedCode(code: string, options: ValidationOptions =
   const unauthorizedImports = importSources.filter((source) => !isImportAllowed(source, mode, target));
   if (unauthorizedImports.length > 0) {
     const message = `Unauthorized imports detected: ${unauthorizedImports.join(', ')}`;
-    if (mode === 'deterministic') {
-      warnings.push(message);
+    if (mode === 'deterministic' || target === 'web') {
+      errors.push(message);
     } else {
-      warnings.push(`${message} (creative mode allows broad libraries, but review compatibility).`);
+      warnings.push(message);
     }
   }
 
@@ -146,20 +146,11 @@ function extractImportSources(code: string): string[] {
 }
 
 function isImportAllowed(source: string, mode: GenerationMode, target: GenerationTarget): boolean {
-  if (source === 'react' || source.startsWith('@/')) {
-    return true;
-  }
-
-  if (mode === 'deterministic') {
-    return source === '@/components/ui';
-  }
-
-  // Creative mode:
-  // - Web: broad allowance (block only Node runtime imports via explicit mismatch checks).
-  // - Expo: allow broad packages + react-native ecosystem.
+  // Expo bundles can reference their normal React Native dependencies.
   if (target === 'expo-rn') {
     return true;
   }
 
-  return true;
+  if (source === 'react') return true;
+  return source === '@/components/ui' || source.startsWith('@/components/ui/');
 }

@@ -73,7 +73,6 @@ export interface PlannerOutput {
     | 'form-page'
     | 'app-shell';
   blocks?: PlannerBlock[]; // NEW: UI broken down into independent blocks
-  components?: ComponentNode[]; // For backwards capability with existing templates
   reasoning: string;
   target?: GenerationTarget;
   designBrief?: string;
@@ -124,6 +123,8 @@ export interface GenerationResult {
   version: number;
   timestamp: string;
   userPrompt: string;
+  projectId?: string;
+  persistenceWarning?: string;
 }
 
 // Chat message
@@ -139,6 +140,8 @@ export interface ChatMessage {
 export interface VersionEntry {
   version: number;
   code: string;
+  sourceType?: 'tsx' | 'html' | 'expo';
+  previewHtml?: string;
   prompt: string;
   plan: PlannerOutput;
   explanation: ExplainerOutput;
@@ -148,6 +151,9 @@ export interface VersionEntry {
 // API request types
 export interface GenerateRequest {
   prompt: string;
+  currentVersion?: number;
+  currentTitle?: string;
+  projectId?: string;
   generationMode?: GenerationMode;
   targetPreference?: TargetPreference;
 }

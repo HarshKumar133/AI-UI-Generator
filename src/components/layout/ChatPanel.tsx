@@ -3,7 +3,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import styles from '@/styles/components/chatPanel.module.css';
 import { ChatMessage, AgentEventState } from '@/types';
-import { TEMPLATES, Template } from '@/lib/templates';
 import {
   MessageSquare,
   Sparkles,
@@ -18,28 +17,14 @@ import {
   Brain,
   Send,
   ChevronRight,
-  Layout,
-  Zap,
-  LucideIcon,
-  ArrowRight,
   AlertTriangle,
   KeyRound,
   RefreshCw,
 } from 'lucide-react';
 
-// Map template icon names to Lucide components
-const TEMPLATE_ICON_MAP: Record<string, LucideIcon> = {
-  BarChart3,
-  Briefcase,
-  ShoppingCart,
-  ClipboardList,
-  TrendingUp,
-};
-
 interface ChatPanelProps {
   messages: ChatMessage[];
   onSendMessage: (message: string) => void;
-  onLoadTemplate?: (template: Template) => void;
   isLoading: boolean;
   hasCode: boolean;
   activeAgents?: AgentEventState[];
@@ -48,13 +33,11 @@ interface ChatPanelProps {
 export const ChatPanel: React.FC<ChatPanelProps> = ({
   messages,
   onSendMessage,
-  onLoadTemplate,
   isLoading,
   hasCode,
   activeAgents = [],
 }) => {
   const [input, setInput] = useState('');
-  const [showTemplates, setShowTemplates] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -82,13 +65,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     }
   };
 
-  const handleTemplateClick = (template: Template) => {
-    if (onLoadTemplate) {
-      onLoadTemplate(template);
-      setShowTemplates(false);
-    }
-  };
-
   const formatTime = (timestamp: string) =>
     new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const lastUserPrompt = [...messages].reverse().find(m => m.role === 'user')?.content;
@@ -102,11 +78,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     { icon: Target, label: 'Task Board', color: 'cyan' },
   ];
 
-  // Resolve a template icon name to a Lucide component
-  const getTemplateIcon = (iconName: string) => {
-    return TEMPLATE_ICON_MAP[iconName] || BarChart3;
-  };
-
   return (
     <div className={styles.chatPanel}>
       {/* Header */}
@@ -116,13 +87,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           AI Chat
         </div>
         <div className={styles.headerRight}>
-          <button
-            className={`${styles.templateToggle} ${showTemplates ? styles.templateToggleActive : ''}`}
-            onClick={() => setShowTemplates(!showTemplates)}
-          >
-            <Layout size={12} />
-            Templates
-          </button>
           <span className={`${styles.headerBadge} ${hasCode ? styles.headerBadgeModify : ''}`}>
             {hasCode ? (
               <><Pencil size={11} /> Modify</>
@@ -135,50 +99,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
       {/* Messages */}
       <div className={styles.messages}>
-        {/* ── Template Gallery (shown when Templates button is toggled) ── */}
-        {showTemplates ? (
-          <div className={styles.templateGallery}>
-            <div className={styles.galleryHeader}>
-              <Zap size={16} className={styles.galleryIcon} />
-              <div>
-                <div className={styles.galleryTitle}>Instant Templates</div>
-                <div className={styles.galleryDesc}>Load a prebuilt UI instantly</div>
-              </div>
-            </div>
-            <div className={styles.galleryGrid}>
-              {TEMPLATES.map((tpl) => {
-                const IconComp = getTemplateIcon(tpl.icon);
-                return (
-                  <button
-                    key={tpl.id}
-                    className={styles.galleryCard}
-                    onClick={() => handleTemplateClick(tpl)}
-                  >
-                    <div className={styles.galleryCardTop}>
-                      <div className={styles.galleryCardIconWrap}>
-                        <IconComp size={20} />
-                      </div>
-                      <div className={styles.galleryCardMeta}>
-                        <div className={styles.galleryCardName}>{tpl.name}</div>
-                        <div className={styles.galleryCardDesc}>{tpl.description}</div>
-                      </div>
-                    </div>
-                    <div className={styles.galleryCardBottom}>
-                      <div className={styles.galleryCardTags}>
-                        {tpl.tags.slice(0, 3).map(tag => (
-                          <span key={tag} className={styles.galleryTag}>{tag}</span>
-                        ))}
-                      </div>
-                      <div className={styles.galleryCardAction}>
-                        Use <ArrowRight size={11} />
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        ) : messages.length === 0 && !isLoading ? (
+        {messages.length === 0 && !isLoading ? (
           /* ── Empty State ── */
           <div className={styles.emptyState}>
             <div className={styles.heroGlow} />
@@ -248,7 +169,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                         <div className={styles.errorHelpHint}>
                           {isQuotaMessage
                             ? 'Add a fresh API key in your environment, then retry your last prompt.'
-                            : 'Retry with a simpler prompt or load a template to continue building.'}
+                            : 'Retry with a clearer, simpler prompt to continue building.'}
                         </div>
                         <div className={styles.errorHelpActions}>
                           {lastUserPrompt && (
@@ -261,13 +182,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                               Retry
                             </button>
                           )}
-                          <button
-                            className={styles.errorActionBtnGhost}
-                            onClick={() => setShowTemplates(true)}
-                          >
-                            <Layout size={12} />
-                            Open Templates
-                          </button>
                         </div>
                       </div>
                     )}

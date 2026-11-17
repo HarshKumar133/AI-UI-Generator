@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { orchestrateModification } from '@/lib/agents';
 import { ApiResponse, GenerationResult } from '@/types';
-import { addVersion } from '@/lib/store';
 import { normalizeConversationContext } from '@/lib/agents/conversationContext';
+import { requireUserId } from '@/lib/auth/server';
+import { apiError } from '@/lib/api/errors';
+import { persistVersion } from '@/lib/db/repository';
 
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
+        const ownerId = await requireUserId();
 
         if (!body.prompt || body.prompt.trim().length === 0) {
             return NextResponse.json<ApiResponse<null>>(
@@ -35,25 +38,36 @@ export async function POST(request: NextRequest) {
             previousLayout: body.previousLayout,
             previousComponentList: body.previousComponentList,
         });
-
-        addVersion({
-            version: result.version,
-            code: result.generation.primaryCode || result.generation.code,
-            prompt: result.userPrompt,
-            plan: result.plan,
-            explanation: result.explanation,
-            timestamp: result.timestamp,
-        });
-
+        const source = result.generation.primaryCode || result.generation.code;
+        try {
+            const saved = await persistVersion(ownerId, {
+                assistantMessage: result.explanation.explanation,
+                projectId: typeof body.projectId === 'string' ? body.projectId : undefined,
+                metadata: {
+                    ...(result.metadata as Record<string, unknown> | undefined),
+                    componentList: result.generation.componentList,
+                    explanation: result.explanation,
+                    plan: result.plan,
+                    previewArtifact: result.generation.previewArtifact,
+                },
+                prompt: result.userPrompt,
+                source,
+                sourceType: result.metadata?.target === 'expo-rn' ? 'expo' : 'tsx',
+                title: typeof body.currentTitle === 'string' ? body.currentTitle : result.userPrompt,
+            });
+            result.projectId = saved.project.id;
+            result.version = saved.version.versionNumber;
+        } catch (error) {
+            console.error('[API /modify] Persistence error:', error);
+            result.version = (Number.isInteger(body.currentVersion) ? body.currentVersion : 0) + 1;
+            result.projectId = typeof body.projectId === 'string' ? body.projectId : undefined;
+            result.persistenceWarning = 'Generated successfully, but it could not be saved to your project library.';
+        }
         return NextResponse.json<ApiResponse<GenerationResult>>(
             { success: true, data: result },
             { status: 200 }
         );
     } catch (error) {
-        console.error('[API /modify] Error:', error);
-        return NextResponse.json<ApiResponse<null>>(
-            { success: false, error: error instanceof Error ? error.message : 'Modification failed' },
-            { status: 500 }
-        );
+        return apiError(error, '[/api/modify] Modification failed');
     }
 }

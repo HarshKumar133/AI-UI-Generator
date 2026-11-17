@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { orchestrateGeneration } from '@/lib/agents';
 import { GenerateRequest, GenerationEvent } from '@/types';
-import { getVersionHistory, addVersion } from '@/lib/store';
+import { requireUserId } from '@/lib/auth/server';
+import { apiError } from '@/lib/api/errors';
+import { persistVersion } from '@/lib/db/repository';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
     try {
         const body: GenerateRequest = await request.json();
+        const ownerId = await requireUserId();
 
         if (!body.prompt || body.prompt.trim().length === 0) {
             return NextResponse.json(
@@ -16,7 +19,9 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const currentVersion = getVersionHistory().length;
+        const currentVersion = Number.isInteger(body.currentVersion) && body.currentVersion! >= 0
+            ? body.currentVersion!
+            : 0;
 
         const stream = new ReadableStream({
             async start(controller) {
@@ -30,26 +35,43 @@ export async function POST(request: NextRequest) {
                     const result = await orchestrateGeneration(
                         body.prompt,
                         currentVersion,
-                        sendEvent,
+                        (event) => {
+                            if (event.type !== 'complete') sendEvent(event);
+                        },
                         {
                             generationMode: body.generationMode,
                             targetPreference: body.targetPreference,
                         }
                     );
-
-                    // Store version
-                    addVersion({
-                        version: result.version,
-                        code: result.generation.primaryCode || result.generation.code,
-                        prompt: result.userPrompt,
-                        plan: result.plan,
-                        explanation: result.explanation,
-                        timestamp: result.timestamp,
-                    });
-
+                    const source = result.generation.primaryCode || result.generation.code;
+                    try {
+                        const saved = await persistVersion(ownerId, {
+                            assistantMessage: result.explanation.explanation,
+                            projectId: typeof body.projectId === 'string' ? body.projectId : undefined,
+                            metadata: {
+                                ...(result.metadata as Record<string, unknown> | undefined),
+                                componentList: result.generation.componentList,
+                                explanation: result.explanation,
+                                plan: result.plan,
+                                previewArtifact: result.generation.previewArtifact,
+                            },
+                            prompt: result.userPrompt,
+                            source,
+                            sourceType: result.metadata?.target === 'expo-rn' ? 'expo' : 'tsx',
+                            title: typeof body.currentTitle === 'string' ? body.currentTitle : result.userPrompt,
+                        });
+                        result.projectId = saved.project.id;
+                        result.version = saved.version.versionNumber;
+                    } catch (error) {
+                        console.error('[API /generate] Persistence error:', error);
+                        result.version = currentVersion + 1;
+                        result.projectId = typeof body.projectId === 'string' ? body.projectId : undefined;
+                        result.persistenceWarning = 'Generated successfully, but it could not be saved to your project library.';
+                    }
+                    sendEvent({ type: 'complete', message: 'Generation complete', data: result });
                 } catch (error) {
                     console.error('[API /generate] Stream error:', error);
-                    sendEvent({ type: 'error', message: error instanceof Error ? error.message : 'Generation failed' });
+                    sendEvent({ type: 'error', message: 'Generation could not be saved. Please try again.' });
                 } finally {
                     controller.close();
                 }
@@ -65,10 +87,6 @@ export async function POST(request: NextRequest) {
         });
 
     } catch (error) {
-        console.error('[API /generate] Error parsing request:', error);
-        return NextResponse.json(
-            { success: false, error: 'Invalid request' },
-            { status: 400 }
-        );
+        return apiError(error, '[/api/generate] Invalid request');
     }
 }

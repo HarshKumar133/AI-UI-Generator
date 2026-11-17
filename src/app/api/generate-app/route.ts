@@ -3,6 +3,9 @@ import { callGemini } from '@/lib/agents/geminiClient';
 import { resolveGenerationMode, resolveTarget } from '@/lib/agents/strategy';
 import { normalizeConversationContext } from '@/lib/agents/conversationContext';
 import { sanitizePrompt, validateGeneratedArtifact } from '@/lib/validation';
+import { requireUserId } from '@/lib/auth/server';
+import { apiError } from '@/lib/api/errors';
+import { persistVersion } from '@/lib/db/repository';
 
 const MAX_HTML_REPAIR_ATTEMPTS = 2;
 
@@ -43,6 +46,7 @@ function stripCodeFences(content: string): string {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+        const ownerId = await requireUserId();
     const rawPrompt = body.prompt as string | undefined;
 
     if (!rawPrompt?.trim()) {
@@ -121,6 +125,22 @@ Fix every reported diagnostic and preserve the intended design and interactions.
     }
 
     const title = (currentTitle || prompt).trim().slice(0, 60);
+    let saved: Awaited<ReturnType<typeof persistVersion>> | undefined;
+    let persistenceWarning: string | undefined;
+    try {
+      saved = await persistVersion(ownerId, {
+        assistantMessage: isFollowUp ? 'Updated standalone HTML app generated.' : `Built ${title}.`,
+        projectId: typeof body.projectId === 'string' ? body.projectId : undefined,
+        metadata: { mode, runtime: 'html', target },
+        prompt,
+        source: cleanHtml,
+        sourceType: 'html',
+        title,
+      });
+    } catch (error) {
+      console.error('[API /generate-app] Persistence error:', error);
+      persistenceWarning = 'Generated successfully, but it could not be saved to your project library.';
+    }
 
     return NextResponse.json({
       success: true,
@@ -134,13 +154,12 @@ Fix every reported diagnostic and preserve the intended design and interactions.
           runtime: 'html',
           selectedLibraries: [],
         },
+        projectId: saved?.project.id,
+        version: saved?.version.versionNumber,
+        persistenceWarning,
       },
     });
   } catch (error) {
-    console.error('[/api/generate-app] Error:', error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Generation failed' },
-      { status: 500 }
-    );
+    return apiError(error, '[/api/generate-app] Generation failed');
   }
 }
